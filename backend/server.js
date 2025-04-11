@@ -6,7 +6,9 @@ import adminRoutes from "./routes/adminRoute.js";
 import checkAndCreateAdmin from "./utils/adminInitialSetup.js";
 import feedbackRoutes from "./routes/feedbackRoute.js";
 import cookieParser from "cookie-parser";
-
+import historyRoutes from "./routes/historyRoutes.js";
+import { emailRoutes } from "./routes/email.js"; // ✅ Use named import
+import promoRoutes from "./routes/promoRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -23,6 +25,14 @@ app.use(
 app.use(cookieParser());
 app.use("/admin", adminRoutes);
 app.use("/feedback", feedbackRoutes);
+// Use promo code routes
+app.use("/api/promo", promoRoutes);
+
+// Use trip history routes
+app.use("/api/history", historyRoutes);
+
+// ✅ Use email routes
+app.use("/api/email", emailRoutes); 
 
 console.log(process.env.MONGO_URI);
 console.log("server is ready");
