@@ -6,7 +6,7 @@ import adminRoutes from "./routes/adminRoute.js";
 import checkAndCreateAdmin from "./utils/adminInitialSetup.js";
 import feedbackRoutes from "./routes/feedbackRoute.js";
 import cookieParser from "cookie-parser";
-import feedbackRoutes from "./routes/feedbackRoute.js";
+
 
 dotenv.config();
 const app = express();

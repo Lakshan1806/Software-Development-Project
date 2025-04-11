@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+
 import myImage from "../assets/rent.image.1.png";
 import myImage2 from "../assets/rent.image.2.png";
 import myImage3 from "../assets/rent.image.3.png";
