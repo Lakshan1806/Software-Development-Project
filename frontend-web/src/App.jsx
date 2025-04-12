@@ -9,7 +9,7 @@ import Feedback from "./pages/Feedback";
 import PaymentPage from "./pages/PaymentPage.jsx";
 import TripHistory from "./pages/TripHistory.jsx"; // Import TripHistory
 import EmailForm from "./pages/EmailForm"; // ✅ Correct path
-
+import CreatePromoPage from "./pages/CreatePromoPage.jsx";
 
 function App() {
   const userId = "123456"; // Replace this with actual logged-in user ID
@@ -26,6 +26,7 @@ function App() {
           <Route path="/help" element={<Help />} />
           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/email" element={<EmailForm />} /> {/*  Add Email Form route */}
+          <Route path="/createpromo" element={<CreatePromoPage />} />
         </Routes>
 
        
