@@ -23,10 +23,10 @@ function Signupinitialpage() {
           >
             continue
           </button>
-          <img src={arrow} />
+          <img src={arrow} className="pl-1 pt-1" />
         </div>
         <p>
-          <Link to="/signin">Already have an account? Sign in</Link>
+          <Link to="/login">Already have an account? Sign in</Link>
         </p>
       </div>
     </div>

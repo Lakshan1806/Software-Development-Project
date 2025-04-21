@@ -1,4 +1,3 @@
-import { Routes, Route } from "react-router-dom"; 
 import NavBar from "./components/Navbar";
 import Signupinitialpage from "./pages/Signupinitialpage";
 import Home from "./pages/Home";
@@ -19,32 +18,22 @@ import EmailForm from "./pages/EmailForm";
 
 
 
+import { AuthProvider } from "./context/AuthContext";
+import RouteSelect from "./components/RouteSelect.jsx";
+//import { GoogleOAuthProvider } from "@react-oauth/google";
 
 function App() {
-  const userId = "123456"; // Replace this with actual logged-in user ID
-
   return (
-    <>
-      <NavBar /> 
-      <main>
-        <ToastContainer />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/rent" element={<Rent />} />
-          <Route path="/drive" element={<Drive />} />
-          <Route path="/ride" element={<Ride />} />
-          <Route path="/help" element={<Help />} />
-          <Route path="/payment" element={<PaymentPage />} />
-          <Route path="/signup" element={<Signupinitialpage />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/signin" element={<Login />} />
-        
-          <Route path="/email" element={<EmailForm />} /> {/*  Add Email Form route */}
-        </Routes>
-
-       
-      </main>
-    </>
+    <div className="debug-outlines">
+      {/*<GoogleOAuthProvider clientId="8873127349-1mrci9u3pdqucjqbjarq4f0n8aoi1fp4.apps.googleusercontent.com">*/}
+        <AuthProvider>
+          <div className="h-dvh "> 
+            <NavBar />
+            <RouteSelect />
+          </div>
+        </AuthProvider>
+      {/*</GoogleOAuthProvider>*/}
+    </div>
   );
 }
 

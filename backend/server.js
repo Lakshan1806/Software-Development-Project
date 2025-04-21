@@ -12,8 +12,17 @@ import locationRoutes from "./routes/locationRoute.js";
 import { createServer } from "http";
 import initializeSocket from "./utils/socketServer.js";
 
+import session from "express-session";
+import authRouter from "./routes/authRoutes.js";
+import userRouter from "./routes/userRoutes.js";
 
 dotenv.config();
+
+if (!process.env.SESSION_SECRET || !process.env.MONGO_URI) {
+  console.error(" Missing SESSION_SECRET or MONGO_URI in .env file");
+  process.exit(1);
+}
+
 const app = express();
 
 // Create HTTP server
@@ -38,10 +47,19 @@ const __dirname = path.dirname(__filename);
 app.use("/uploads", express.static(path.join(__dirname, "/uploads")));
 
 // Cookie parser and routes
+app.use("/uploads", express.static(path.join(__dirname, "/uploads")));
+console.log(path.join(__dirname, "/uploads"));
+
 app.use(cookieParser());
 app.use("/admin", adminRoutes);
 app.use("/feedback", feedbackRoutes);
+
+app.use(express.urlencoded({ extended: false }));
 app.use("/location", locationRoutes);
+
+app.use("/api/auth", authRouter);
+app.use("/api/user", userRouter);
+app.use("/api/admin", adminRoutes);
 
 async function startServer() {
   await connectDB();
