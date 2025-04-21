@@ -9,7 +9,7 @@ function Earnings() {
     <div className="">
       <div className="bg-white px-8 ">
         <div className="flex justify-between py-4">
-          <p className="text-black font-bold text-lg">DRIVE</p>
+          <p className="text-black font-bold text-lg">EARNINGS</p>
           <p className="text-yellow-600 font-medium cursor-pointer text-lg">
             Go back
           </p>
