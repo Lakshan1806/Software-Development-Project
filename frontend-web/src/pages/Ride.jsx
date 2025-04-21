@@ -282,7 +282,7 @@ function Ride() {
   };
 
   const simulateDriverMovement = async () => {
-    // In a real app, this would come from the driver's device GPS
+    // In a real app, this would come from the driver's device GPS 
     if (!driverLocation) return;
 
     // Simulate moving towards destination

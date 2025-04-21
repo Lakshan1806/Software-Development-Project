@@ -14,7 +14,7 @@ import Login from "./pages/Login";
 
 import PaymentPage from "./pages/PaymentPage.jsx";
 import TripHistory from "./pages/TripHistory.jsx"; // Import TripHistory
-import EmailForm from "./pages/EmailForm"; // ✅ Correct path
+import EmailForm from "./pages/EmailForm"; 
 
 
 
