@@ -6,5 +6,5 @@ function RentOptions() {
     );
   }
   
-  export default RentOptions; // ✅ Make sure this line is present
+  export default RentOptions; 
   

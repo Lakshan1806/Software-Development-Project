@@ -7,12 +7,12 @@ import Ride from "./pages/Ride";
 import Help from "./pages/Help";
 import Feedback from "./pages/Feedback";
 import PaymentPage from "./pages/PaymentPage.jsx";
-import TripHistory from "./pages/TripHistory.jsx"; // Import TripHistory
-import EmailForm from "./pages/EmailForm"; // ✅ Correct path
+import TripHistory from "./pages/TripHistory.jsx"; 
+import EmailForm from "./pages/EmailForm"; 
 import CreatePromoPage from "./pages/CreatePromoPage.jsx";
 
 function App() {
-  const userId = "123456"; // Replace this with actual logged-in user ID
+  const userId = "123456"; 
 
   return (
     <div>
@@ -25,7 +25,7 @@ function App() {
           <Route path="/ride" element={<Ride />} />
           <Route path="/help" element={<Help />} />
           <Route path="/payment" element={<PaymentPage />} />
-          <Route path="/email" element={<EmailForm />} /> {/*  Add Email Form route */}
+          <Route path="/email" element={<EmailForm />} /> 
           <Route path="/createpromo" element={<CreatePromoPage />} />
         </Routes>
 

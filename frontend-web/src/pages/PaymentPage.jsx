@@ -50,7 +50,6 @@ const PaymentPage = () => {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate payment processing
     setTimeout(() => {
       alert("Payment successful!");
       setLoading(false);

@@ -1,9 +1,8 @@
 import express from "express";
-import History from "../models/History.js"; // Import your History model
+import History from "../models/History.js"; 
 
 const router = express.Router();
 
-// Store completed trip in history
 router.post("/add", async (req, res) => {
   try {
     const newHistory = new History(req.body);
@@ -14,7 +13,6 @@ router.post("/add", async (req, res) => {
   }
 });
 
-// Get history for a specific user
 router.get("/:userId", async (req, res) => {
   try {
     const userHistory = await History.find({ userId: req.params.userId }).sort({ createdAt: -1 });
@@ -24,4 +22,4 @@ router.get("/:userId", async (req, res) => {
   }
 });
 
-export default router; // ✅ Use `export default` for ESM compatibility
+export default router; 

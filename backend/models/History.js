@@ -14,4 +14,4 @@ const historySchema = new mongoose.Schema(
 
 const History = mongoose.model("History", historySchema);
 
-export default History; // ✅ Ensure this is using `export default`
+export default History; 

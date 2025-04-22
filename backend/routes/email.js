@@ -7,16 +7,14 @@ import fs from "fs";
 dotenv.config();
 const router = express.Router();
 
-// Configure Nodemailer transporter
 const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-        user: process.env.EMAIL, // Your email
-        pass: process.env.EMAIL_PASS // Your app password
+        user: process.env.EMAIL, 
+        pass: process.env.EMAIL_PASS 
     }
 });
 
-// Function to generate PDF from email message
 const generatePDF = (subject, message, filename) => {
     return new Promise((resolve, reject) => {
         const doc = new PDFDocument();
@@ -35,7 +33,6 @@ const generatePDF = (subject, message, filename) => {
     });
 };
 
-// Email sending route
 router.post("/send-email", async (req, res) => {
     const { recipient, subject, message } = req.body;
     const pdfFilename = `email_${Date.now()}.pdf`;
@@ -58,7 +55,7 @@ router.post("/send-email", async (req, res) => {
         };
 
         await transporter.sendMail(mailOptions);
-        fs.unlinkSync(pdfFilename); // Delete file after sending
+        fs.unlinkSync(pdfFilename); 
 
         res.status(200).json({ success: true, message: "Email with PDF sent successfully!" });
     } catch (error) {

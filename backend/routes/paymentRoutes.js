@@ -10,11 +10,10 @@ router.post("/process-payment", async (req, res) => {
         if (promoCode) {
             const promo = await PromoCode.findOne({ code: promoCode });
             if (promo && promo.isActive && promo.expirationDate > new Date() && promo.usedCount < promo.usageLimit) {
-                finalAmount -= (amount * promo.discount) / 100; // Apply discount
+                finalAmount -= (amount * promo.discount) / 100; 
             }
         }
 
-        // Process payment with finalAmount (integrate with Stripe/PayPal here)
 
         res.json({ message: "Payment successful", amountPaid: finalAmount });
     } catch (error) {

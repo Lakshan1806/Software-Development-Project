@@ -73,7 +73,6 @@ function Text1() {
 }
 
 const TransportationForm = () => {
-  // Available branches/cities
   const locations = [
     "Nuwarelliya",
     "Galle",
@@ -101,7 +100,6 @@ const TransportationForm = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Here you would handle form submission, e.g., API call
     console.log('Form submitted:', formData);
     alert('Booking request submitted successfully!');
   };
