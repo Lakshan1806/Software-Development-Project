@@ -16,6 +16,7 @@ import session from "express-session";
 import authRouter from "./routes/authRoutes.js";
 import userRouter from "./routes/userRoutes.js";
 
+
 dotenv.config();
 
 if (!process.env.SESSION_SECRET || !process.env.MONGO_URI) {
@@ -32,12 +33,25 @@ const httpServer = createServer(app);
 initializeSocket(httpServer);
 
 // Express middleware setup
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
 app.use(
   cors({
     credentials: true,
     origin: "http://localhost:5173",
+  })
+);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: true,
+    cookie:{
+      secure:process.env.NODE_ENV==="production",
+      httpOnly:true,
+      maxAge: 24*60*60*1000,
+    },
   })
 );
 
