@@ -12,7 +12,7 @@ import EmailForm from "./pages/EmailForm";
 import CreatePromoPage from "./pages/CreatePromoPage.jsx";
 
 function App() {
-  const userId = "123456"; 
+  //const userId = "123456"; 
 
   return (
     <div>

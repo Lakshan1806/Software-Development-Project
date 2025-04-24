@@ -3,7 +3,7 @@ import PromoCode from "../models/PromoCode.js";
 
 const router = express.Router();
 
-// Create a new promo code (Admin Only)
+// Create a new promo code
 router.post("/create", async (req, res) => {
   try {
     const { code, discount, expirationDate, usageLimit } = req.body;
@@ -14,13 +14,23 @@ router.post("/create", async (req, res) => {
       return res.status(400).json({ message: "Promo code already exists" });
     }
 
-    //  Create a new promo code if not found
+    // Create a new promo code if not found
     const newPromo = new PromoCode({ code, discount, expirationDate, usageLimit });
     await newPromo.save();
     
     res.status(201).json({ message: "Promo code created", promo: newPromo });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all promo codes
+router.get("/all", async (req, res) => {
+  try {
+    const promos = await PromoCode.find();
+    res.json(promos);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch promo codes", error: error.message });
   }
 });
 
