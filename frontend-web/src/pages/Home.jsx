@@ -19,7 +19,7 @@ function Home() {
   return (
     <div className="flex flex-col items-center w-full px-10 mt-10">
       <div className="flex justify-between items-center w-full">
-        <div className="relative w-[400px] h-[670px] overflow-hidden border-4 border-black rounded-3xl transition-transform duration-300 ease-in-out hover:scale-110">
+        <div className="relative w-[380px] h-[570px] overflow-hidden border-4 border-black rounded-3xl transition-transform duration-300 ease-in-out hover:scale-110">
           <img src={Car20} alt="Car" className="w-full h-full object-cover" />
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="p-[2px] rounded-2xl bg-gradient-to-r from-[#FF7C1D] to-[#FFD12E] transition-transform duration-300 ease-in-out hover:scale-105">
@@ -30,7 +30,7 @@ function Home() {
           </div>
         </div>
 
-        <div className="relative w-[400px] h-[670px] overflow-hidden border-4 border-black rounded-3xl transition-transform duration-300 ease-in-out hover:scale-110">
+        <div className="relative w-[380px] h-[570px] overflow-hidden border-4 border-black rounded-3xl transition-transform duration-300 ease-in-out hover:scale-110">
           <img src={Car10} alt="Car" className="w-full h-full object-cover" />
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="p-[2px] rounded-2xl bg-gradient-to-r from-[#FF7C1D] to-[#FFD12E] transition-transform duration-300 ease-in-out hover:scale-105">
@@ -41,7 +41,7 @@ function Home() {
           </div>
         </div>
 
-        <div className="relative w-[400px] h-[670px] overflow-hidden border-4 border-black rounded-3xl transition-transform duration-300 ease-in-out hover:scale-110">
+        <div className="relative w-[380px] h-[570px] overflow-hidden border-4 border-black rounded-3xl transition-transform duration-300 ease-in-out hover:scale-110">
           <img src={Car30} alt="Car" className="w-full h-full object-cover" />
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="p-[2px] rounded-2xl bg-gradient-to-r from-[#FF7C1D] to-[#FFD12E] transition-transform duration-300 ease-in-out hover:scale-105">
@@ -88,7 +88,7 @@ function Home() {
       </div>
 
       <div className="text-center mt-8 px-10">
-        <p className="text-black text-[40px] font-inter font-normal break-words">
+        <p className="text-black text-[30px] font-inter font-normal break-words">
           Movement is our passion; it fuels our purpose. Every day, we wake up<br />
           driven to enhance your journey. We strive to redefine what it means <br />
           to travel seamlessly - whether you’re exploring the vibrant streets of <br />

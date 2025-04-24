@@ -27,6 +27,7 @@ function App() {
           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/email" element={<EmailForm />} /> 
           <Route path="/createpromo" element={<CreatePromoPage />} />
+          <Route path="/history" element={<TripHistory />} /> 
         </Routes>
 
        
