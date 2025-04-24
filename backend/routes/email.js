@@ -21,7 +21,7 @@ const generatePDF = (subject, message, filename) => {
         const stream = fs.createWriteStream(filename);
 
         doc.pipe(stream);
-        doc.fontSize(18).text("Email Notification", { align: "center" });
+        doc.fontSize(18).text("URBAN MOVE", { align: "center" });
         doc.moveDown();
         doc.fontSize(14).text(`Subject: ${subject}`);
         doc.moveDown();

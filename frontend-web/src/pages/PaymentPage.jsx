@@ -9,13 +9,12 @@ const PaymentPage = () => {
     expiry: "",
     cvc: "",
     amount: "",
-    promo: ""
+    promo: "",
   });
 
   const [finalAmount, setFinalAmount] = useState(null);
   const [applyMessage, setApplyMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [promoApplied, setPromoApplied] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -35,12 +34,10 @@ const PaymentPage = () => {
 
       const discountedAmount = amount - (amount * response.data.discount) / 100;
       setFinalAmount(discountedAmount);
-      setPromoApplied(true);
       setApplyMessage(`Promo applied! New Amount: Rs. ${discountedAmount.toFixed(2)}`);
     } catch (error) {
       setApplyMessage("Invalid promo code");
       setFinalAmount(null);
-      setPromoApplied(false);
     }
   };
 
@@ -48,10 +45,31 @@ const PaymentPage = () => {
     e.preventDefault();
     setLoading(true);
 
-    setTimeout(() => {
+    try {
+      await applyPromoCode();  
+
+      const emailData = {
+        recipient: form.email,
+        subject: "Payment Confirmation",
+        message: `Hello ${form.name}, your payment of Rs. ${finalAmount ? finalAmount.toFixed(2) : form.amount} has been processed successfully.`,
+      };
+
+      const response = await axios.post("http://localhost:5000/api/email/send-email", emailData);
+      console.log("Email sent:", response);
       alert("Payment successful!");
+    } catch (error) {
+      console.error("Error sending email:", error);
+
+      if (error.response) {
+        console.error("Server Response:", error.response);
+      } else if (error.request) {
+        console.error("Request error:", error.request);
+      } else {
+        console.error("Error:", error.message);
+      }
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
 
   return (
