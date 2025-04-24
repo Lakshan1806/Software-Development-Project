@@ -1,115 +1,154 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import axios from "axios";
 
-const CreatePromoPage = () => {
+const PaymentPage = () => {
   const [form, setForm] = useState({
-    code: "",
-    discount: "",
+    name: "",
+    email: "",
+    cardNumber: "",
     expiry: "",
-    usageLimit: "",
+    cvc: "",
+    amount: "",
+    promo: ""
   });
 
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [promos, setPromos] = useState([]);
-
-  const fetchPromos = async () => {
-    try {
-      const response = await axios.get("http://localhost:5000/api/promo/all");
-      setPromos(response.data);
-    } catch (err) {
-      console.error("Failed to fetch promo codes:", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchPromos();
-  }, []);
+  const [finalAmount, setFinalAmount] = useState(null);
+  const [applyMessage, setApplyMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [promoApplied, setPromoApplied] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMessage("");
-    setError("");
-
-    if (!form.code || !form.discount || !form.usageLimit) {
-      setError("Please fill in promo code, discount, and usage limit.");
+  const applyPromoCode = async () => {
+    const amount = parseFloat(form.amount);
+    if (!form.promo || isNaN(amount)) {
+      setApplyMessage("Please enter a valid promo code and amount.");
       return;
     }
 
     try {
-      const response = await axios.post("http://localhost:5000/api/promo/create", {
-        code: form.code.trim(),
-        discount: parseFloat(form.discount),
-        expirationDate: form.expiry || null,
-        usageLimit: parseInt(form.usageLimit),
+      const response = await axios.post("http://localhost:5000/api/promo/apply", {
+        code: form.promo.trim(),
       });
 
-      setMessage(`✅ Promo "${form.code}" created successfully!`);
-      setForm({ code: "", discount: "", expiry: "", usageLimit: "" });
-      fetchPromos(); // refresh promo list
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "❌ Failed to create promo code. Server error."
-      );
+      const discountedAmount = amount - (amount * response.data.discount) / 100;
+      setFinalAmount(discountedAmount);
+      setPromoApplied(true);
+      setApplyMessage(`Promo applied! New Amount: Rs. ${discountedAmount.toFixed(2)}`);
+    } catch (error) {
+      setApplyMessage("Invalid promo code");
+      setFinalAmount(null);
+      setPromoApplied(false);
     }
   };
 
-  return (
-    <div className="min-h-screen flex flex-col items-center bg-gray-100 p-6">
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl p-8 mb-8">
-        <h2 className="text-4xl font-light bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent text-center mb-6">
-          Create Promo Code
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input type="text" name="code" placeholder="Promo Code" value={form.code} onChange={handleChange} className="w-full border p-3 rounded-md" required />
-          <input type="number" name="discount" placeholder="Discount (%)" value={form.discount} onChange={handleChange} className="w-full border p-3 rounded-md" required />
-          <input type="date" name="expiry" placeholder="Expiry Date" value={form.expiry} onChange={handleChange} className="w-full border p-3 rounded-md" />
-          <input type="number" name="usageLimit" placeholder="Usage Limit" value={form.usageLimit} onChange={handleChange} className="w-full border p-3 rounded-md" required />
-          <button type="submit" className="w-full py-3 rounded-md text-white font-semibold bg-gradient-to-r from-yellow-400 to-orange-500 hover:opacity-90">
-            Create Promo
-          </button>
-          {message && <p className="text-green-600 text-sm mt-2">{message}</p>}
-          {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
-        </form>
-      </div>
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
 
-      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl p-6">
-        <h3 className="text-2xl font-semibold mb-4">Existing Promo Codes</h3>
-        {promos.length === 0 ? (
-          <p>No promo codes found.</p>
-        ) : (
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-200">
-                <th className="p-3">Code</th>
-                <th className="p-3">Discount (%)</th>
-                <th className="p-3">Expiry</th>
-                <th className="p-3">Usage Limit</th>
-                <th className="p-3">Used</th>
-                <th className="p-3">Active</th>
-              </tr>
-            </thead>
-            <tbody>
-              {promos.map((promo) => (
-                <tr key={promo._id} className="border-t">
-                  <td className="p-3">{promo.code}</td>
-                  <td className="p-3">{promo.discount}</td>
-                  <td className="p-3">{promo.expirationDate ? new Date(promo.expirationDate).toLocaleDateString() : "N/A"}</td>
-                  <td className="p-3">{promo.usageLimit}</td>
-                  <td className="p-3">{promo.usedCount || 0}</td>
-                  <td className="p-3">{promo.isActive ? "✅" : "❌"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+    setTimeout(() => {
+      alert("Payment successful!");
+      setLoading(false);
+    }, 2000);
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
+      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-8">
+        <h2 className="text-3xl font-light text-center mb-6 text-orange-500">Complete Your Payment</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            type="text"
+            name="name"
+            placeholder="Name"
+            value={form.name}
+            onChange={handleChange}
+            className="w-full border p-3 rounded-md"
+            required
+          />
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={form.email}
+            onChange={handleChange}
+            className="w-full border p-3 rounded-md"
+            required
+          />
+          <input
+            type="text"
+            name="cardNumber"
+            placeholder="Card Number"
+            value={form.cardNumber}
+            onChange={handleChange}
+            className="w-full border p-3 rounded-md"
+            required
+          />
+          <div className="flex gap-4">
+            <input
+              type="text"
+              name="expiry"
+              placeholder="MM/YY"
+              value={form.expiry}
+              onChange={handleChange}
+              className="w-1/2 border p-3 rounded-md"
+              required
+            />
+            <input
+              type="text"
+              name="cvc"
+              placeholder="CVC"
+              value={form.cvc}
+              onChange={handleChange}
+              className="w-1/2 border p-3 rounded-md"
+              required
+            />
+          </div>
+          <input
+            type="number"
+            name="amount"
+            placeholder="Enter Amount"
+            value={form.amount}
+            onChange={handleChange}
+            className="w-full border p-3 rounded-md"
+            required
+          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              name="promo"
+              placeholder="Promo Code"
+              value={form.promo}
+              onChange={handleChange}
+              className="w-full border p-3 rounded-md"
+            />
+            <button
+              type="button"
+              onClick={applyPromoCode}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
+            >
+              Apply
+            </button>
+          </div>
+          {applyMessage && <p className="text-sm text-gray-700">{applyMessage}</p>}
+
+          <div className="text-right text-lg font-semibold">
+            Total: Rs. {finalAmount !== null ? finalAmount.toFixed(2) : form.amount || "0.00"}
+          </div>
+
+          <button
+            type="submit"
+            className={`w-full py-3 rounded-md text-white font-semibold ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-gradient-to-r from-yellow-400 to-orange-500"}`}
+            disabled={loading}
+          >
+            {loading ? "Processing..." : "Pay Now"}
+          </button>
+        </form>
       </div>
     </div>
   );
 };
 
-export default CreatePromoPage;
+export default PaymentPage;
