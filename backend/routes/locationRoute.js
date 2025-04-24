@@ -5,8 +5,9 @@ import { getRouteDetails } from "../utils/getRouteDetails.js";
 
 const router = express.Router();
 
-// In-memory storage for active rides (in production, use a database)
+// In-memory storage for active rides and scheduled rides
 const activeRides = new Map();
+const scheduledRides = new Map();
 
 // Google Maps Places Autocomplete endpoint
 router.get("/autocomplete", async (req, res) => {
@@ -108,6 +109,114 @@ router.post("/track", async (req, res) => {
   }
 });
 
+// Schedule a ride endpoint
+router.post("/rides/schedule", async (req, res) => {
+  const { pickup, dropoff, scheduledTime } = req.body;
+
+  if (!pickup || !dropoff || !scheduledTime) {
+    return res.status(400).json({ 
+      message: "Pickup, dropoff and scheduled time are required",
+      status: "INVALID_REQUEST"
+    });
+  }
+
+  try {
+    const rideId = uuidv4();
+    const scheduledDate = new Date(scheduledTime);
+    
+    if (scheduledDate < new Date()) {
+      return res.status(400).json({
+        message: "Scheduled time must be in the future",
+        status: "INVALID_REQUEST"
+      });
+    }
+
+    // In a real app, you would store this in a database
+    scheduledRides.set(rideId, {
+      _id: rideId,
+      pickup,
+      dropoff,
+      scheduledTime: scheduledDate,
+      status: "scheduled",
+      createdAt: new Date(),
+      userId: req.user?.id || "demo-user" // Assuming you have user authentication
+    });
+
+    res.json({
+      status: "SUCCESS",
+      rideId,
+      message: "Ride scheduled successfully"
+    });
+
+  } catch (error) {
+    console.error("Scheduling error:", error);
+    res.status(500).json({ 
+      message: error.message || "Failed to schedule ride",
+      status: "ERROR"
+    });
+  }
+});
+
+// Get scheduled rides endpoint
+// In your routes file (location.js or similar)
+router.get("/scheduled", (req, res) => {
+  try {
+    // Convert the Map to an array of rides
+    const rides = Array.from(scheduledRides.values())
+      .filter(ride => ride.userId === (req.user?.id || "demo-user"))
+      .map(ride => ({
+        ...ride,
+        scheduledTime: ride.scheduledTime.toISOString()
+      }));
+
+    res.json({
+      status: "SUCCESS",
+      rides,
+      count: rides.length
+    });
+  } catch (error) {
+    console.error("Error fetching scheduled rides:", error);
+    res.status(500).json({ 
+      message: error.message || "Failed to fetch scheduled rides",
+      status: "ERROR"
+    });
+  }
+});
+// Cancel scheduled ride endpoint
+router.delete("/rides/scheduled/:rideId", (req, res) => {
+  const { rideId } = req.params;
+
+  if (!rideId) {
+    return res.status(400).json({ 
+      message: "Ride ID is required",
+      status: "INVALID_REQUEST"
+    });
+  }
+
+  try {
+    if (!scheduledRides.has(rideId)) {
+      return res.status(404).json({ 
+        message: "Scheduled ride not found",
+        status: "NOT_FOUND"
+      });
+    }
+
+    // In a real app, you would verify the user owns this ride
+    scheduledRides.delete(rideId);
+
+    res.json({
+      status: "SUCCESS",
+      message: "Scheduled ride cancelled successfully"
+    });
+  } catch (error) {
+    console.error("Error cancelling scheduled ride:", error);
+    res.status(500).json({ 
+      message: error.message || "Failed to cancel scheduled ride",
+      status: "ERROR"
+    });
+  }
+});
+
 // Start live tracking
 router.post("/start-tracking", async (req, res) => {
   const { rideId } = req.body;
@@ -192,7 +301,7 @@ router.get("/ride-status/:rideId", (req, res) => {
 function calculateRouteProgress(ride) {
   if (!ride.steps || ride.steps.length === 0) return 0;
   
-  // Simplified progress calculation - in a real app, you'd use more sophisticated geospatial calculations
+  // Simplified progress calculation
   const totalDistance = getDistanceFromLatLonInKm(
     ride.startLocation.lat,
     ride.startLocation.lng,
@@ -240,7 +349,7 @@ router.get("/reverse-geocode", async (req, res) => {
 
   try {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-    const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${9.382927},${80.573134}&key=${apiKey}`;
+    const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`;
 
     const response = await axios.get(geocodeUrl);
     const data = response.data;

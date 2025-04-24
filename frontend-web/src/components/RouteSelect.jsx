@@ -1,4 +1,4 @@
-import Signupinitialpage from "../pages/SignupInitialPage";
+import Signupinitialpage from "../pages/Signupinitialpage.jsx";
 import Home from "../pages/Home";
 import Rent from "../pages/Rent";
 import Drive from "../pages/Drive";

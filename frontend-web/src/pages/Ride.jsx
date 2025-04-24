@@ -4,6 +4,8 @@ import ridecar from "../assets/Ride-pics/ridecar.svg";
 import Earnings from "./Earnings";
 import { useNavigate } from "react-router-dom";
 import Communication from "./Communication";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const MapPinIcon = () => (
   <svg
@@ -68,6 +70,11 @@ function Ride() {
   const [driverLocation, setDriverLocation] = useState(null);
   const [progress, setProgress] = useState(0);
   const [trackingInterval, setTrackingInterval] = useState(null);
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [scheduledTime, setScheduledTime] = useState(new Date());
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [scheduledRides, setScheduledRides] = useState([]);
+  const [showScheduledRides, setShowScheduledRides] = useState(false);
 
   const pickupRef = useRef(null);
   const dropoffRef = useRef(null);
@@ -102,6 +109,9 @@ function Ride() {
           };
         });
     }
+    
+    // Load scheduled rides on component mount
+    fetchScheduledRides();
   }, []);
 
   // Clean up tracking interval on unmount
@@ -112,6 +122,17 @@ function Ride() {
       }
     };
   }, [trackingInterval]);
+
+  const fetchScheduledRides = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/rides/scheduled");
+      if (response.data.status === "SUCCESS") {
+        setScheduledRides(response.data.rides);
+      }
+    } catch (err) {
+      console.error("Error fetching scheduled rides:", err);
+    }
+  };
 
   // Fetch location suggestions
   const fetchSuggestions = async (input, isPickup) => {
@@ -193,7 +214,7 @@ function Ride() {
       });
 
       const { latitude, longitude } = position.coords;
-      console.log("Got coordinates:", latitude, longitude); 
+      console.log("Got coordinates:", latitude, longitude);
 
       // Get address from coordinates
       const response = await axios.get(
@@ -209,9 +230,6 @@ function Ride() {
     } catch (error) {
       console.error("Location error:", error);
       setLocationError(error.message || "Failed to get your location");
-
-      
-      // setPickup("Colombo Fort, Sri Lanka"); 
     } finally {
       setIsGettingLocation(false);
     }
@@ -220,7 +238,7 @@ function Ride() {
   const handleSuggestionClick = (suggestion, isPickup) => {
     isPickup
       ? setPickup(suggestion.description)
-      : setDropoff(suggestion.description);
+      : setDropoff(suggestion.description); 
     isPickup ? setPickupSuggestions([]) : setDropoffSuggestions([]);
     setActiveInput(null);
   };
@@ -246,7 +264,7 @@ function Ride() {
       if (response.data.status === "SUCCESS") {
         setIsTracking(true);
         // Start polling for driver location updates
-        const interval = setInterval(fetchDriverLocation, 5000); // Poll every 5 seconds
+        const interval = setInterval(fetchDriverLocation, 5000);
         setTrackingInterval(interval);
       } else {
         throw new Error(response.data.message || "Failed to start tracking");
@@ -282,10 +300,8 @@ function Ride() {
   };
 
   const simulateDriverMovement = async () => {
-    // In a real app, this would come from the driver's device GPS 
     if (!driverLocation) return;
 
-    // Simulate moving towards destination
     const newLat = driverLocation.lat + 0.001;
     const newLng = driverLocation.lng + 0.001;
 
@@ -296,7 +312,6 @@ function Ride() {
         lng: newLng,
       });
 
-      // Refresh the driver location display
       await fetchDriverLocation();
     } catch (err) {
       console.error("Error updating driver location:", err);
@@ -350,11 +365,64 @@ function Ride() {
     }
   };
 
+  const handleScheduleRide = async () => {
+    if (!pickup.trim() || !dropoff.trim()) {
+      setError("Please enter both pickup and dropoff locations");
+      return;
+    }
+
+    setIsScheduling(true);
+    setError(null);
+
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/rides/schedule",
+        {
+          pickup: pickup.trim(),
+          dropoff: dropoff.trim(),
+          scheduledTime: scheduledTime.toISOString(),
+        }
+      );
+
+      if (response.data.status === "SUCCESS") {
+        alert("Ride scheduled successfully!");
+        setShowScheduleForm(false);
+        fetchScheduledRides();
+      } else {
+        throw new Error(response.data.message || "Failed to schedule ride");
+      }
+    } catch (err) {
+      console.error("Scheduling error:", err);
+      setError(
+        err.response?.data?.message || err.message || "Failed to schedule ride"
+      );
+    } finally {
+      setIsScheduling(false);
+    }
+  };
+
   const handleStartRide = () => {
     startLiveTracking();
-    // For demo purposes, simulate driver movement
     const simulationInterval = setInterval(simulateDriverMovement, 3000);
     return () => clearInterval(simulationInterval);
+  };
+
+  const cancelScheduledRide = async (rideId) => {
+    try {
+      const response = await axios.delete(
+        `http://localhost:5000/rides/scheduled/${rideId}`
+      );
+
+      if (response.data.status === "SUCCESS") {
+        alert("Ride cancelled successfully");
+        fetchScheduledRides();
+      } else {
+        throw new Error(response.data.message || "Failed to cancel ride");
+      }
+    } catch (err) {
+      console.error("Error cancelling ride:", err);
+      alert(err.response?.data?.message || "Failed to cancel ride");
+    }
   };
 
   return (
@@ -506,6 +574,46 @@ function Ride() {
               </div>
             </div>
 
+            {showScheduleForm && (
+              <div className="bg-gray-800 p-4 rounded-lg space-y-4">
+                <h3 className="text-lg font-medium text-[#FFD12E]">
+                  Schedule Your Ride
+                </h3>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-300">
+                    Date & Time
+                  </label>
+                  <DatePicker
+                    selected={scheduledTime}
+                    onChange={(date) => setScheduledTime(date)}
+                    showTimeSelect
+                    timeFormat="HH:mm"
+                    timeIntervals={15}
+                    dateFormat="MMMM d, yyyy h:mm aa"
+                    minDate={new Date()}
+                    className="w-full p-2 rounded bg-gray-700 text-white border border-gray-600"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowScheduleForm(false)}
+                    className="px-4 py-2 text-sm text-gray-300 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleScheduleRide}
+                    disabled={isScheduling}
+                    className="px-4 py-2 bg-[#FF7C1D] text-white rounded hover:bg-[#FF6C1D] disabled:opacity-50"
+                  >
+                    {isScheduling ? "Scheduling..." : "Confirm Schedule"}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {error && (
               <div className="p-3 bg-red-100 text-red-700 rounded-lg flex items-start gap-2">
                 <svg
@@ -521,7 +629,7 @@ function Ride() {
                   />
                 </svg>
                 <div>
-                  <p className="font-medium">Route calculation failed</p>
+                  <p className="font-medium">Error</p>
                   <p className="text-sm">{error}</p>
                 </div>
               </div>
@@ -629,10 +737,11 @@ function Ride() {
 
                   <button
                     type="button"
+                    onClick={() => setShowScheduleForm(!showScheduleForm)}
                     className="flex-1 px-6 py-3 border-2 border-[#ad9481] text-[#FF7C1D] font-medium rounded-full hover:bg-[#FF7C1D]/10 transition-colors"
                     disabled={loading}
                   >
-                    SCHEDULE LATER
+                    {showScheduleForm ? "CANCEL SCHEDULE" : "SCHEDULE LATER"}
                   </button>
                 </>
               ) : (
@@ -658,6 +767,50 @@ function Ride() {
               )}
             </div>
           </form>
+
+          <div className="mt-6">
+            <button
+              onClick={() => setShowScheduledRides(!showScheduledRides)}
+              className="w-full py-2 bg-gray-800 text-[#FFD12E] rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              {showScheduledRides ? "Hide" : "View"} Scheduled Rides
+            </button>
+
+            {showScheduledRides && (
+              <div className="mt-4 bg-gray-800 rounded-lg p-4">
+                <h3 className="text-lg font-medium text-[#FFD12E] mb-3">
+                  Your Scheduled Rides
+                </h3>
+                {scheduledRides.length === 0 ? (
+                  <p className="text-gray-400">No scheduled rides found</p>
+                ) : (
+                  <ul className="space-y-3">
+                    {scheduledRides.map((ride) => (
+                      <li
+                        key={ride._id}
+                        className="bg-gray-700 p-3 rounded-lg flex justify-between items-center"
+                      >
+                        <div>
+                          <p className="text-[#FF7C1D]">
+                            {new Date(ride.scheduledTime).toLocaleString()}
+                          </p>
+                          <p className="text-gray-300">
+                            {ride.pickup} → {ride.dropoff}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => cancelScheduledRide(ride._id)}
+                          className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                        >
+                          Cancel
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="w-full lg:w-1/2 flex justify-center mt-8 lg:mt-0">
@@ -739,4 +892,5 @@ function Ride() {
     </div>
   );
 }
+
 export default Ride;
