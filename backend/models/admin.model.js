@@ -9,6 +9,8 @@ const adminSchema = new mongoose.Schema({
   age: { type: Number },
   firstLogin: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
+  phone: { type: String, default: "" },
+  photo: { type: String, default: "" },
 });
 
 adminSchema.pre("save", async function () {

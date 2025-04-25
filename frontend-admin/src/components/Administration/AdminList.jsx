@@ -6,7 +6,7 @@ function AdminList() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get("/admin//get_all_admin");
+        const response = await axios.get("/admin/get_all_admin");
         console.log(response);
         setUser(response.data);
       } catch (error) {

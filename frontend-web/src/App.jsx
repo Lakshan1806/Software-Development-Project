@@ -1,4 +1,3 @@
-import { Routes, Route } from "react-router-dom"; 
 import NavBar from "./components/Navbar";
 import Home from "./pages/Home";
 import Rent from "./pages/Rent";
@@ -7,12 +6,12 @@ import Ride from "./pages/Ride";
 import Help from "./pages/Help";
 import Feedback from "./pages/Feedback";
 import PaymentPage from "./pages/PaymentPage.jsx";
-import TripHistory from "./pages/TripHistory.jsx"; 
-import EmailForm from "./pages/EmailForm"; 
-import CreatePromoPage from "./pages/CreatePromoPage.jsx";
+import TripHistory from "./pages/TripHistory.jsx"; // Import TripHistory
+import EmailForm from "./pages/EmailForm"; // ✅ Correct path
+
 
 function App() {
-  //const userId = "123456"; 
+  const userId = "123456"; // Replace this with actual logged-in user ID
 
   return (
     <div>
@@ -25,9 +24,7 @@ function App() {
           <Route path="/ride" element={<Ride />} />
           <Route path="/help" element={<Help />} />
           <Route path="/payment" element={<PaymentPage />} />
-          <Route path="/email" element={<EmailForm />} /> 
-          <Route path="/createpromo" element={<CreatePromoPage />} />
-          <Route path="/history" element={<TripHistory />} /> 
+          <Route path="/email" element={<EmailForm />} /> {/*  Add Email Form route */}
         </Routes>
 
        
@@ -37,4 +34,3 @@ function App() {
 }
 
 export default App;
-

@@ -40,7 +40,7 @@ function Navbar() {
     "font-sans bg-gradient-to-b from-[#FFD12E] to-[#FF7C1D] text-transparent bg-clip-text flex gap-[10px]";
 
   return (
-    <nav className="bg-black h-svh flex flex-col items-center py-5 justify-between top-0 bottom-0 sticky">
+    <nav className="bg-black h-dvh flex flex-col items-center py-5 justify-between top-0 bottom-0 sticky">
       <header>
         <img src={Logo} alt="Logo" className="w-[148px] h-[139px]" />
       </header>

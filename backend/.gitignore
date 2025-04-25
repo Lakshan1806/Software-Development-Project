@@ -1,0 +1,5 @@
+uploads/admin/*
+uploads/cars/*
+!uploads/admin/.gitkeep
+!uploads/cars/.gitkeep
+
