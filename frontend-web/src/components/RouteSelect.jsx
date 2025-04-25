@@ -14,8 +14,9 @@ import TripHistory from "../pages/TripHistory.jsx";
 import EmailForm from "../pages/EmailForm";
 import ForgotPasswordPage from "../pages/ForgotPasswordPage.jsx";
 import ResetpasswordPage from "../pages/ResetPasswordPage.jsx";
+import CreatePromoPage from "../pages/CreatePromoPage.jsx";
 function RouteSelect() {
-  const userId = "123456"; // Replace this with actual logged-in user ID
+  const userId = "123456"; 
 
   return (
     <div>
@@ -31,6 +32,7 @@ function RouteSelect() {
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signin" element={<Signininitialpage />} />
+          <Route path="/createpromo" element={<CreatePromoPage />} />
           <Route path="/email" element={<EmailForm />} />{" "}
           <Route path="/feedback" element={<Feedback />} />
           <Route
