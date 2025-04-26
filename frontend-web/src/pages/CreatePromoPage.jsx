@@ -50,7 +50,7 @@ const CreatePromoPage = () => {
 
       setMessage(`✅ Promo "${form.code}" created successfully!`);
       setForm({ code: "", discount: "", expiry: "", usageLimit: "" });
-      fetchPromos(); // refresh promo list
+      fetchPromos(); 
     } catch (err) {
       setError(
         err.response?.data?.message || "❌ Failed to create promo code. Server error."
@@ -101,7 +101,7 @@ const CreatePromoPage = () => {
                   <td className="p-3">{promo.expirationDate ? new Date(promo.expirationDate).toLocaleDateString() : "N/A"}</td>
                   <td className="p-3">{promo.usageLimit}</td>
                   <td className="p-3">{promo.usedCount || 0}</td>
-                  <td className="p-3">{promo.isActive ? "✅" : "❌"}</td>
+                  <td className="p-3">{promo.isActive ? "Active" : "Not Active"}</td>
                 </tr>
               ))}
             </tbody>

@@ -40,7 +40,20 @@ router.post("/validate", async (req, res) => {
     const { code } = req.body;
     const promo = await PromoCode.findOne({ code });
 
-    if (!promo || !promo.isActive || promo.expirationDate < new Date() || promo.usedCount >= promo.usageLimit) {
+    if (!promo) {
+      return res.status(400).json({ message: "Invalid promo code" });
+    }
+
+    const now = new Date();
+    if (promo.expirationDate < now || promo.usedCount >= promo.usageLimit) {
+      if (promo.isActive) {
+        promo.isActive = false;
+        await promo.save();
+      }
+      return res.status(400).json({ message: "Invalid promo code" });
+    }
+
+    if (!promo.isActive) {
       return res.status(400).json({ message: "Invalid promo code" });
     }
 
@@ -56,7 +69,20 @@ router.post("/apply", async (req, res) => {
     const { code } = req.body;
     const promo = await PromoCode.findOne({ code });
 
-    if (!promo || !promo.isActive || promo.expirationDate < new Date() || promo.usedCount >= promo.usageLimit) {
+    if (!promo) {
+      return res.status(400).json({ message: "Invalid promo code" });
+    }
+
+    const now = new Date();
+    if (promo.expirationDate < now || promo.usedCount >= promo.usageLimit) {
+      if (promo.isActive) {
+        promo.isActive = false;
+        await promo.save();
+      }
+      return res.status(400).json({ message: "Invalid promo code" });
+    }
+
+    if (!promo.isActive) {
       return res.status(400).json({ message: "Invalid promo code" });
     }
 
