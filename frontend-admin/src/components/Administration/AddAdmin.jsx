@@ -21,7 +21,7 @@ function AddAdmin() {
   };
 
   return (
-    <div className="col-span-4 row-span-12 p-4 rounded border border-black">
+    <div className="col-span-4 row-span-12 p-4 rounded shadow-[0px_10px_20px_0px_rgba(0,_0,_0,_0.15)]">
       <div className="flex items-center justify-center h-full">
         <div className="max-w-md flex flex-col items-center gap-[42px]">
           <div className="flex flex-col items-center [-webkit-text-stroke:1px_rgb(255,124,29)] font-[700] text-[36px]">

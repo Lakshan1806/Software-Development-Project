@@ -62,7 +62,7 @@ function AccountInfo() {
   };
 
   return (
-    <div className="col-span-12 row-span-12 p-4 rounded-xl border border-black flex flex-col">
+    <div className="col-span-12 row-span-12 p-4 rounded-xl shadow-[0px_10px_20px_0px_rgba(0,_0,_0,_0.15)] flex flex-col">
       <div className="flex flex-row">
         <img
           src={imageUrl}

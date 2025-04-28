@@ -5,13 +5,13 @@ import YearlyIncome from "../components/Home/YearlyIncome";
 
 function Home() {
   return (
-    <div className="h-dvh flex flex-col">
+    <div className="h-full flex flex-col">
       <div>
-        <h1 className="[-webkit-text-stroke:1px_rgb(255,124,29)] font-[700] text-[36px]">
+        <h1 className="[-webkit-text-stroke:1px_rgb(255,124,29)] font-[700] text-[36px] flex-none">
           Home
         </h1>
       </div>
-      <div className="grid gap-3 grid-cols-12 grid-rows-12 grow">
+      <div className="grid gap-3 grid-cols-12 grid-rows-12 min-h-0 flex-1">
         <YearlyIncome />
         <ActivePromotions />
         <CarTypes />

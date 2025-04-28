@@ -14,6 +14,9 @@ import TripHistory from "../pages/TripHistory.jsx";
 import EmailForm from "../pages/EmailForm";
 import ForgotPasswordPage from "../pages/ForgotPasswordPage.jsx";
 import ResetpasswordPage from "../pages/ResetPasswordPage.jsx";
+import Profile from "../pages/profile.jsx";
+import ProtectedRoute from "./ProtectedRoute";
+
 function RouteSelect() {
   const userId = "123456"; // Replace this with actual logged-in user ID
 
@@ -41,6 +44,14 @@ function RouteSelect() {
           <Route
             path="/reset-password/:token"
             element={<ResetpasswordPage />}
+          />{" "}
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
           />{" "}
         </Routes>
       </main>

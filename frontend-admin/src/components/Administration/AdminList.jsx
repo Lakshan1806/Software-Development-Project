@@ -20,10 +20,19 @@ function AdminList() {
   }, []);
 
   return (
-    <div className="col-span-8 row-span-12 p-4 rounded border border-black flex flex-col">
+    <div className="col-span-8 row-span-12 p-4 rounded shadow-[0px_10px_20px_0px_rgba(0,_0,_0,_0.15)] flex flex-col">
       {user.map((admin) => {
+        console.log(admin.photo);
         return (
-          <div key={admin._id} className="p-4 my-2 border-black rounded shadow">
+          <div
+            key={admin._id}
+            className="p-4 my-2 rounded shadow-[0px_10px_20px_0px_rgba(0,_0,_0,_0.15)]"
+          >
+            <img
+              src={admin.photo}
+              alt="profile image"
+              className="w-24 h-24 rounded-full object-cover"
+            />
             <h3 className="text-lg font-bold">{admin.name}</h3>
             <p>Username: {admin.username}</p>
             <p>Email: {admin.email}</p>

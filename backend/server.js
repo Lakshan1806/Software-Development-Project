@@ -14,9 +14,9 @@ import initializeSocket from "./utils/socketServer.js";
 
 import session from "express-session";
 import authRouter from "./routes/authRoutes.js";
-import userRouter from "./routes/userRoutes.js";
-
-
+import passport from "passport";
+import MongoStore from "connect-mongo";
+import "./config/passport.js";
 dotenv.config();
 
 if (!process.env.SESSION_SECRET || !process.env.MONGO_URI) {
@@ -40,22 +40,49 @@ app.use(
     origin: "http://localhost:5173",
   })
 );
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: true,
-    cookie:{
-      secure:process.env.NODE_ENV==="production",
-      httpOnly:true,
-      maxAge: 24*60*60*1000,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
     },
+    store: MongoStore.create({ // Add session store
+      mongoUrl: process.env.MONGO_URI,
+      collectionName: 'sessions'
+    })
+  })
+);
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+app.use("/auth/", authRouter);
+
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ success: false, message: "Internal Server Error" });
+});
+
+app.get("/", (req, res) => {
+  res.send("Server is ready");
+});
+app.use(express.json());
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
   })
 );
 
-// Static files setup
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use("/uploads", express.static(path.join(__dirname, "/uploads")));
@@ -72,7 +99,6 @@ app.use(express.urlencoded({ extended: false }));
 app.use("/location", locationRoutes);
 
 app.use("/api/auth", authRouter);
-app.use("/api/user", userRouter);
 app.use("/api/admin", adminRoutes);
 
 async function startServer() {

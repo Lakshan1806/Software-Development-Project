@@ -10,7 +10,7 @@ import OtpInput from "../components/otp-input";
 import Line1 from "../signup_photos/liner1.svg";
 import useCountdown from "../components/hooks/useCountdown";
 import { toast } from "react-toastify";
-//import GoogleLoginButton from "../components/GoogleLogin";
+import GoogleLoginButton from "../components/GoogleLogin";
 
 const Login = () => {
   const { login } = useContext(AuthContext);
@@ -60,7 +60,7 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); 
+    setError("");
 
     try {
       if (step === 1) {
@@ -153,9 +153,9 @@ const Login = () => {
                   SIGN IN
                 </button>
               </div>
-             
-              <img src={imgl} alt="Divider" className="w-full h-auto" />
 
+              <img src={imgl} alt="Divider" className="w-full h-auto" />
+              <GoogleLoginButton />
               <p className="pt-[15px] font-sans bg-gradient-to-r from-[#FFD12E] to-[#FF7C1D] text-transparent bg-clip-text font-[400] text-[20px] text-center">
                 <Link to="/Register">Don't have an account? Sign up</Link>
               </p>

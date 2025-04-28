@@ -2,16 +2,16 @@ import React, { useState, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import imgc from "../signup_photos/signupcustomer.svg"; // Signup background image
+import imgc from "../signup_photos/signupcustomer.svg";
 import { Link } from "react-router-dom";
-import imgl from "../signup_photos/linervector.svg"; // Divider line image
+import imgl from "../signup_photos/linervector.svg";
 import arrow from "../signup_photos/arrowvector.svg";
 import Line1 from "../signup_photos/liner1.svg";
 import OtpInput from "../components/otp-input";
 import success from "../signup_photos/success.svg";
 import useCountdown from "../components/hooks/useCountdown";
-import { toast } from 'react-toastify';
-//import GoogleLoginButton from "../components/GoogleLogin";
+import { toast } from "react-toastify";
+import GoogleLoginButton from "../components/GoogleLogin";
 
 const Register = () => {
   const { register } = useContext(AuthContext);
@@ -33,30 +33,30 @@ const Register = () => {
     secondsLeft: phoneSecondsLeft,
     isActive: isPhoneActive,
     start: startPhoneTimer,
-    reset: resetPhoneTimer
+    reset: resetPhoneTimer,
   } = useCountdown(60);
 
   const {
     secondsLeft: emailSecondsLeft,
     isActive: isEmailActive,
     start: startEmailTimer,
-    reset: resetEmailTimer
+    reset: resetEmailTimer,
   } = useCountdown(60);
 
   const handleResendPhoneOtp = async () => {
     if (isPhoneActive) return;
-    
+
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/auth/resend-otp", 
+        "http://localhost:5000/api/auth/resend-otp",
         { phone: formData.phoneNumber },
         { withCredentials: true }
       );
-      
+
       if (response.data.message.includes("sent to phone")) {
         toast.success("New OTP sent to your phone");
         startPhoneTimer();
-        // For development only - show OTP in console
+
         console.log("New Phone OTP:", response.data.otp);
       } else {
         throw new Error(response.data.message || "Failed to resend OTP");
@@ -66,21 +66,21 @@ const Register = () => {
       console.error(err);
     }
   };
-  
+
   const handleResendEmailOtp = async () => {
     if (isEmailActive) return;
-    
+
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/auth/resend-otp", 
+        "http://localhost:5000/api/auth/resend-otp",
         { email: formData.email },
         { withCredentials: true }
       );
-      
+
       if (response.data.message.includes("sent to email")) {
         toast.success("New OTP sent to your email");
         startEmailTimer();
-        // For development only - show OTP in console
+
         console.log("New Email OTP:", response.data.otp);
       } else {
         throw new Error(response.data.message || "Failed to resend OTP");
@@ -149,12 +149,10 @@ const Register = () => {
           { withCredentials: true }
         );
         resetEmailTimer();
-        setStep(6); 
-        
+        setStep(6);
         setTimeout(() => {
-          register(formData);
-          navigate("/login");
-        }, 3000); 
+          navigate("/");
+        }, 2000);
       }
     } catch (err) {
       setError(
@@ -219,10 +217,9 @@ const Register = () => {
                   SIGN UP
                 </button>
               </div>
-             
-        
-              <img src={imgl} alt="Divider" className="w-full h-auto" />
 
+              <img src={imgl} alt="Divider" className="w-full h-auto" />
+              <GoogleLoginButton />
               <p className="pt-[15px] font-sans bg-gradient-to-r from-[#FFD12E] to-[#FF7C1D] text-transparent bg-clip-text font-[400] text-[20px] text-center">
                 <Link to="/signin">Already have an account? Sign in</Link>
               </p>
@@ -295,13 +292,15 @@ const Register = () => {
 
                   <img src={arrow} className="pl-1 pt-1" />
                 </div>
-                <button 
-              onClick={handleResendPhoneOtp} 
-              disabled={isPhoneActive}
-              className={`${isPhoneActive ? 'text-gray-400' : 'text-orange-500'}`}
-            >
-              {isPhoneActive ? `Resend in ${phoneSecondsLeft}s` : "Resend OTP"}
-            </button>
+                <button
+                  onClick={handleResendPhoneOtp}
+                  disabled={isPhoneActive}
+                  className={`${isPhoneActive ? "text-gray-400" : "text-orange-500"}`}
+                >
+                  {isPhoneActive
+                    ? `Resend in ${phoneSecondsLeft}s`
+                    : "Resend OTP"}
+                </button>
               </div>
             </>
           )}
@@ -370,16 +369,18 @@ const Register = () => {
                   >
                     continue
                   </button>
-                  
+
                   <img src={arrow} className="pl-1 pt-1" />
                 </div>
-                <button 
-              onClick={handleResendEmailOtp} 
-              disabled={isEmailActive}
-              className={`${isEmailActive ? 'text-gray-400' : 'text-orange-500'}`}
-            >
-              {isEmailActive ? `Resend in ${emailSecondsLeft}s` : "Resend OTP"}
-            </button>
+                <button
+                  onClick={handleResendEmailOtp}
+                  disabled={isEmailActive}
+                  className={`${isEmailActive ? "text-gray-400" : "text-orange-500"}`}
+                >
+                  {isEmailActive
+                    ? `Resend in ${emailSecondsLeft}s`
+                    : "Resend OTP"}
+                </button>
               </div>
             </>
           )}

@@ -10,19 +10,21 @@ axios.defaults.withCredentials = true;
 
 function App() {
   return (
-    <UserContextProvider>
-      <Routes>
-        <Route path="/" element={<AuthContainer />} />
-        <Route
-          path="/dashboard/*"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </UserContextProvider>
+    <div className="debug-outlines">
+      <UserContextProvider>
+        <Routes>
+          <Route path="/" element={<AuthContainer />} />
+          <Route
+            path="/dashboard/*"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </UserContextProvider>
+    </div>
   );
 }
 

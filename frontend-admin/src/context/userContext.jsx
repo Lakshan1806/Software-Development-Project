@@ -4,19 +4,23 @@ import { createContext, useEffect, useState } from "react";
 export const UserContext = createContext({});
 
 export function UserContextProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    const storedUser = localStorage.getItem("userData");
-    return storedUser ? JSON.parse(storedUser) : null;
-  });
-  console.log(user);
+  const [user, setUser] = useState(null);
+  
 
   useEffect(() => {
-    if (!user) {
-      axios.get("/admin/profile").then(({ data }) => {
+    async function validateSession() {
+      try {
+        const response = await axios.get("/admin/profile");
+        const data = response.data;
         localStorage.setItem("userData", JSON.stringify(data));
         setUser(data);
-      });
+      } catch (error) {
+        console.error("Session validation fail:", error);
+        localStorage.removeItem("userData");
+        setUser(null);
+      }
     }
+    validateSession();
   }, []);
 
   return (

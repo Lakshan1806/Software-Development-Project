@@ -7,7 +7,7 @@ import sendSMS from "./sendSms.js";
   
     try {
       const generatedOtp = String(Math.floor(100000 + Math.random() * 900000));
-      const expiryTime = Date.now() + 0.6* 60 * 1000;
+      const expiryTime = Date.now() +  60 * 1000;
   
       if (type === "phone" && phone) {
       

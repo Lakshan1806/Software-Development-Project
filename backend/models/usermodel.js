@@ -28,7 +28,6 @@ const userSchema = new mongoose.Schema(
     isAccountVerified: { type: Boolean, default: false },
     name: { type: String },
     avatar: { type: String },
-    isVerified: { type: Boolean, default: false },
     authMethod: { type: String, enum: ['local', 'google'], default: 'local' },
     resetPasswordToken: String,
     resetPasswordExpiresAt: Date,
@@ -38,6 +37,17 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 
 const userModel = mongoose.model("User", userSchema);

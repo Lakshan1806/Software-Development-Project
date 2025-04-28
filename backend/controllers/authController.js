@@ -12,29 +12,34 @@ import clearTempUserSession from "../utils/clearTempUserSession.js";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 
-
 dotenv.config();
 const userController = {
   register: async (req, res) => {
-    if (!req.session)
+    if (!req.session) {
       return res.status(500).json({ message: "Session is not initialized" });
+    }
 
-    if (!req.session.tempUser) req.session.tempUser = {};
+    const {
+      username,
+      password,
+      phoneNumber,
+      otp: phoneOTP,
+      email,
+      emailOTP,
+    } = req.body;
+
+    if (username && password) {
+      req.session.tempUser = {};
+    }
+
+    let userSession = req.session.tempUser || {};
 
     try {
-      const {
-        username,
-        password,
-        phoneNumber,
-        otp: phoneOTP,
-        email,
-        emailOTP,
-      } = req.body;
-      let userSession = req.session.tempUser || {};
-
       if (!userSession.username && !userSession.password) {
         if (!username || !password) {
-          return res.status(400).json({ message: "Username and Password are required" });
+          return res
+            .status(400)
+            .json({ message: "Username and Password are required" });
         }
 
         if (await checkExistingUser("username", username, userModel)) {
@@ -43,29 +48,34 @@ const userController = {
 
         const hashedPassword = await hashPassword(password);
         req.session.tempUser = { username, password: hashedPassword };
-        return saveSession( req.session,res,"Please enter your phone number.");
+        return saveSession(req.session, res, "Please enter your phone number.");
       }
 
       if (userSession.username && !userSession.phoneNumber) {
         if (!phoneNumber)
           return res.status(400).json({ message: "Phone number is required" });
-        function validatePhoneNumber(phoneNumber) {
-          const phoneRegex = /^(0|94|\+94)?(7[0-9])([0-9]{7})$/;
-          return phoneRegex.test(phoneNumber);
-        }
 
-        if (!validatePhoneNumber(phoneNumber)) {
-          return res.status(400).json({ message: "Invalid phone number format" });
+        const phoneRegex = /^(0|94|\+94)?(7[0-9])([0-9]{7})$/;
+
+        if (!phoneRegex.test(phoneNumber)) {
+          return res
+            .status(400)
+            .json({ message: "Invalid phone number format" });
         }
 
         if (await checkExistingUser("phone", phoneNumber, userModel)) {
-          return res.status(400).json({ message: "Phone number already exists" });
+          return res
+            .status(400)
+            .json({ message: "Phone number already exists" });
         }
 
         await sendOtp({ body: { type: "phone", phone: phoneNumber } }, res);
 
         req.session.tempUser.phoneNumber = phoneNumber;
-        return saveSession(req.session, res, "OTP sent to phone. Please verify."
+        return saveSession(
+          req.session,
+          res,
+          "OTP sent to phone. Please verify."
         );
       }
 
@@ -77,19 +87,25 @@ const userController = {
         if (!phoneOTP)
           return res.status(400).json({ message: "Phone OTP is required" });
 
-        if (
-          !(await validateOtp(
-            "phone",
-            userSession.phoneNumber,
-            phoneOTP,
-            otpModel
-          ))
-        ) {
-          return res.status(400).json({ message: "Invalid or expired phone OTP" });
+        const isValidPhoneOtp = await validateOtp(
+          "phone",
+          userSession.phoneNumber,
+          phoneOTP,
+          otpModel
+        );
+
+        if (!isValidPhoneOtp) {
+          return res
+            .status(400)
+            .json({ message: "Invalid or expired phone OTP" });
         }
 
         userSession.phoneVerified = true;
-        return saveSession( req.session, res,"Phone number verified. Please enter your email address.");
+        return saveSession(
+          req.session,
+          res,
+          "Phone number verified. Please enter your email address."
+        );
       }
 
       if (
@@ -106,7 +122,11 @@ const userController = {
 
         await sendOtp({ body: { type: "email", email } }, res);
         req.session.tempUser.email = email;
-        return saveSession(req.session, res,"OTP sent to email. Please verify.");
+        return saveSession(
+          req.session,
+          res,
+          "OTP sent to email. Please verify."
+        );
       }
 
       if (
@@ -119,10 +139,17 @@ const userController = {
           return res.status(400).json({ message: "Email OTP is required" });
         }
 
-        if (
-          !(await validateOtp("email", userSession.email, emailOTP, otpModel))
-        ) {
-          return res.status(400).json({ message: "Invalid or expired email OTP" });
+        const isValidEmailOtp = await validateOtp(
+          "email",
+          userSession.email,
+          emailOTP,
+          otpModel
+        );
+
+        if (!isValidEmailOtp) {
+          return res
+            .status(400)
+            .json({ message: "Invalid or expired email OTP" });
         }
 
         userSession.emailVerified = true;
@@ -132,29 +159,53 @@ const userController = {
           password: userSession.password,
           phone: userSession.phoneNumber,
           email: userSession.email,
+          isAccountVerified: true,
         });
 
         const token = generateJwtToken(newUser._id, newUser.username);
+        res.cookie("token", token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "strict",
+          maxAge: 3600000,
+        });
+
+        req.session.user = {
+          _id: newUser._id,
+          username: newUser.username,
+          email: newUser.email,
+          phone: newUser.phone,
+        };
+
         clearTempUserSession(req.session);
 
         try {
-          await nodemailer.sendEmail(newUser.email, "Welcome to the Cab Booking System", "Registration successful");
+          await nodemailer.sendEmail(
+            newUser.email,
+            "Welcome to the Cab Booking System",
+            "Registration successful"
+          );
         } catch (error) {
-          return res.status(500).json({ message: "Failed to send welcome email", error: error.message });
+          return res.status(500).json({
+            message: "Failed to send welcome email",
+            error: error.message,
+          });
         }
-        return res.status(201).json({ message: "Registration successful!" ,
-          user: {
-            _id: newUser._id,
-            username: newUser.username,
-            email: newUser.email,
-            phone: newUser.phone
-          }
+
+        return res.status(201).json({
+          message: "Registration successful!",
+          user: req.session.user,
         });
       }
 
-      return res.status(400).json({ message: "Unexpected state of registration process." });
+      return res.status(400).json({
+        message: "Unexpected state of registration process.",
+      });
     } catch (error) {
-      return res.status(500).json({ message: "Server error", error: error.message });
+      return res.status(500).json({
+        message: "Server error",
+        error: error.message,
+      });
     }
   },
 
@@ -163,14 +214,12 @@ const userController = {
       return res.status(500).json({ message: "Session is not initialized" });
     }
 
-    if (!req.session.tempUser) {
+    const { username, password, otp: phoneOTP } = req.body;
+    if (username && password) {
       req.session.tempUser = {};
     }
-
+    let userSession = req.session.tempUser || {};
     try {
-      const { username, password, otp: phoneOTP } = req.body;
-      let userSession = req.session.tempUser || {};
-
       if (!userSession.username && !userSession.password) {
         if (!username || !password) {
           return res
@@ -179,11 +228,15 @@ const userController = {
         }
 
         const user = await userModel.findOne({ username });
-        if (!user || !(await bcrypt.compare(password, user.password))) {
-          
+        if (!user || user.authMethod === "google") {
+          return res.status(400).json({
+            message: "Please sign in with Google",
+            authMethod: user?.authMethod || "none",
+          });
+        }
+        if (!user || !bcrypt.compare(password, user.password)) {
           if (user) {
-            
-            const isMatch = await bcrypt.compare(password, user.password);
+            const isMatch = bcrypt.compare(password, user.password);
             if (isMatch) {
               return res.status(400).json({ message: "Invalid credentials" });
             }
@@ -192,25 +245,34 @@ const userController = {
             message: "Invalid credentials",
             details: {
               userExists: !!user,
-              passwordMatch: user ? await bcrypt.compare(password, user.password) : false,
+              passwordMatch: user
+                ? bcrypt.compare(password, user.password)
+                : false,
             },
           });
         }
 
         req.session.tempUser = { username, password };
         const phoneNumber = user.phone;
-        if (!phoneNumber) {return res.status(400).json({ message: "Phone number not found for the user" });
+        if (!phoneNumber) {
+          return res
+            .status(400)
+            .json({ message: "Phone number not found for the user" });
         }
 
         try {
           await sendOtp({ body: { type: "phone", phone: phoneNumber } }, res);
         } catch (error) {
-          return res.status(500).json({ message: "Failed to send OTP", error: error.message });
+          return res
+            .status(500)
+            .json({ message: "Failed to send OTP", error: error.message });
         }
 
         req.session.tempUser.phoneNumber = phoneNumber;
         await req.session.save();
-        return res.status(200).json({ message: "OTP sent to your phone. Please verify to continue." });
+        return res.status(200).json({
+          message: "OTP sent to your phone. Please verify to continue.",
+        });
       }
 
       if (
@@ -229,7 +291,9 @@ const userController = {
           otpModel
         );
         if (!isValidOtp) {
-          return res.status(400).json({ message: "Invalid or expired phone OTP" });
+          return res
+            .status(400)
+            .json({ message: "Invalid or expired phone OTP" });
         }
 
         req.session.tempUser.phoneVerified = true;
@@ -260,7 +324,10 @@ const userController = {
         .status(400)
         .json({ message: "Invalid request or process step." });
     } catch (error) {
-      const errorMessage = error && error.message ? error.message : "An unexpected server error occurred";
+      const errorMessage =
+        error && error.message
+          ? error.message
+          : "An unexpected server error occurred";
 
       if (!res.headersSent) {
         return res.status(500).json({ message: errorMessage });
@@ -277,34 +344,46 @@ const userController = {
       });
 
       req.session.destroy((err) => {
-        if (err) { return res.status(500).json({ message: "Failed to destroy session", error: err.message }); }
+        if (err) {
+          return res
+            .status(500)
+            .json({ message: "Failed to destroy session", error: err.message });
+        }
         return res.status(200).json({ message: "Logout successful!" });
       });
     } catch (error) {
-      
-      return res.status(500).json({ message: "Server error during logout", error: error.message });
+      return res
+        .status(500)
+        .json({ message: "Server error during logout", error: error.message });
     }
   },
 
   isAuthenticated: async (req, res) => {
     try {
-      if (req.session.user) {
-        return res.json({ success: true, user: req.session.user });
+      if (req.body.userId) {
+        const user = await userModel
+          .findById(req.body.userId)
+          .select("-password -__v");
+        return res.json({ success: true, user });
       } else {
-        return res.json({ success: false });
+        return res
+          .status(401)
+          .json({ success: false, message: "Not authenticated" });
       }
     } catch (error) {
       return res.status(500).json({ success: false, message: "Server error" });
     }
   },
-  
+
   forgotPassword: async (req, res) => {
     const { email } = req.body;
     try {
       const user = await userModel.findOne({ email });
 
       if (!user) {
-        return res.status(400).json({ success: false, message: "User not found" });
+        return res
+          .status(400)
+          .json({ success: false, message: "User not found" });
       }
 
       const resetToken = crypto.randomBytes(20).toString("hex");
@@ -316,11 +395,20 @@ const userController = {
       await user.save();
 
       try {
-        await nodemailer.sendPasswordResetEmail(user.email, `${process.env.CLIENT_URL}/reset-password/${resetToken}`);
+        await nodemailer.sendPasswordResetEmail(
+          user.email,
+          `${process.env.CLIENT_URL}/reset-password/${resetToken}`
+        );
       } catch (error) {
-        return res.status(500).json({message: "Failed to send Reset email", error: error.message});
+        return res.status(500).json({
+          message: "Failed to send Reset email",
+          error: error.message,
+        });
       }
-      res.status(200).json({ success: true, message: "Password reset link sent to your email"});
+      res.status(200).json({
+        success: true,
+        message: "Password reset link sent to your email",
+      });
     } catch (error) {
       res.status(400).json({ success: false, message: error.message });
     }
@@ -337,7 +425,9 @@ const userController = {
       });
 
       if (!user) {
-        return res.status(400).json({ success: false, message: "Invalid or expired reset token" });
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid or expired reset token" });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -358,31 +448,38 @@ const userController = {
       }
 
       const updatedUser = await userModel.findById(user._id);
-      
+
       await nodemailer.sendResetSuccessEmail(updatedUser.email);
 
-      res.status(200).json({ success: true, message: "Password reset successful" });
+      res
+        .status(200)
+        .json({ success: true, message: "Password reset successful" });
     } catch (error) {
-      
       res.status(500).json({ success: false, message: error.message });
     }
   },
-  
+
   resendOTP: async (req, res) => {
     try {
       const { email, phone } = req.body;
 
       if (!req.session.tempUser) {
-        return res.status(400).json({ message: "Registration session not found" });
+        return res
+          .status(400)
+          .json({ message: "Registration session not found" });
       }
 
       if (email) {
         if (req.session.tempUser.email !== email) {
-           return res.status(400).json({ message: "Email doesn't match registration" });
+          return res
+            .status(400)
+            .json({ message: "Email doesn't match registration" });
         }
       } else if (phone) {
         if (req.session.tempUser.phoneNumber !== phone) {
-          return res.status(400).json({ message: "Phone doesn't match registration" });
+          return res
+            .status(400)
+            .json({ message: "Phone doesn't match registration" });
         }
       } else {
         return res.status(400).json({ message: "Email or phone is required" });
@@ -411,10 +508,42 @@ const userController = {
         message: `New OTP sent to ${email ? "email" : "phone"}`,
       });
     } catch (error) {
-      return res.status(500).json({message: "Failed to resend OTP", error: error.message});
+      return res
+        .status(500)
+        .json({ message: "Failed to resend OTP", error: error.message });
     }
   },
+  getUserProfile: async (req, res) => {
+    try {
+      const user = await userModel
+        .findById(req.body.userId)
+        .select(
+          "-password -__v -resetPasswordToken -resetPasswordExpiresAt -verificationToken -verificationTokenExpiresAt"
+        );
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const userData =
+        user.authMethod === "google"
+          ? {
+              _id: user._id,
+              name: user.name,
+              email: user.email,
+              avatar: user.avatar,
+              authMethod: user.authMethod,
+            }
+          : {
+              _id: user._id,
+              username: user.username,
+              email: user.email,
+              phone: user.phone,
+              authMethod: user.authMethod,
+            };
 
-  
+      return res.json(userData);
+    } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  },
 };
 export default userController;
