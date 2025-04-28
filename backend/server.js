@@ -81,7 +81,7 @@ async function startServer() {
   
   httpServer.listen(5000, () => {
     console.log("Server started at http://localhost:5000");
-    console.log("WebSocket server ready for communication");
+    //console.log("WebSocket server ready for communication");
   });
 }
 

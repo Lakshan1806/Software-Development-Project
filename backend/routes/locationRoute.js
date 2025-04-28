@@ -19,6 +19,7 @@ router.get("/autocomplete", async (req, res) => {
       status: "INVALID_REQUEST"
     });
   }
+  
 
   try {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
@@ -73,7 +74,7 @@ router.post("/track", async (req, res) => {
     }
 
     const route = data.routes[0].legs[0];
-    const mapEmbedUrl = `https://www.google.com/maps/embed/v1/directions?key=${apiKey}&origin=${encodeURIComponent(pickup)}&destination=${encodeURIComponent(dropoff)}&zoom=13`;
+    const mapEmbedUrl = `https://www.google.com/maps/embed/v1/directions?key=${apiKey}&origin=${encodeURIComponent(pickup)}&destination=${encodeURIComponent(dropoff)}&zoom=10`;
     
     // Generate a unique ride ID
     const rideId = uuidv4();
@@ -158,26 +159,30 @@ router.post("/rides/schedule", async (req, res) => {
 });
 
 // Get scheduled rides endpoint
+
 // In your routes file (location.js or similar)
-router.get("/scheduled", (req, res) => {
+router.get("/rides/scheduled", (req, res) => {
+  console.log("Scheduled rides endpoint hit!"); // Debug log
   try {
-    // Convert the Map to an array of rides
+    const now = new Date();
     const rides = Array.from(scheduledRides.values())
-      .filter(ride => ride.userId === (req.user?.id || "demo-user"))
+      .filter(ride => new Date(ride.scheduledTime) > now)
       .map(ride => ({
         ...ride,
         scheduledTime: ride.scheduledTime.toISOString()
       }));
-
+    
+    console.log("Returning rides:", rides); // Debug log
+    
     res.json({
       status: "SUCCESS",
       rides,
       count: rides.length
     });
   } catch (error) {
-    console.error("Error fetching scheduled rides:", error);
+    console.error("Error:", error); // Debug log
     res.status(500).json({ 
-      message: error.message || "Failed to fetch scheduled rides",
+      message: error.message,
       status: "ERROR"
     });
   }

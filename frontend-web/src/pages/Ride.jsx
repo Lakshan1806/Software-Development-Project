@@ -123,16 +123,20 @@ function Ride() {
     };
   }, [trackingInterval]);
 
-  const fetchScheduledRides = async () => {
-    try {
-      const response = await axios.get("http://localhost:5000/rides/scheduled");
-      if (response.data.status === "SUCCESS") {
-        setScheduledRides(response.data.rides);
-      }
-    } catch (err) {
-      console.error("Error fetching scheduled rides:", err);
+ // Change the fetchScheduledRides function to match the correct endpoint:
+const fetchScheduledRides = async () => {
+  try {
+    const response = await axios.get("http://localhost:5000/rides/scheduled"); // Note the "/rides/" prefix
+    if (response.data.status === "SUCCESS") {
+      const futureRides = response.data.rides.filter(ride => 
+        new Date(ride.scheduledTime) > new Date()
+      );
+      setScheduledRides(futureRides);
     }
-  };
+  } catch (err) {
+    console.error("Error fetching scheduled rides:", err);
+  }
+};
 
   // Fetch location suggestions
   const fetchSuggestions = async (input, isPickup) => {
@@ -262,7 +266,7 @@ function Ride() {
       );
 
       if (response.data.status === "SUCCESS") {
-        setIsTracking(true);
+        setIsTracking(true); 
         // Start polling for driver location updates
         const interval = setInterval(fetchDriverLocation, 5000);
         setTrackingInterval(interval);
