@@ -1,13 +1,20 @@
 import express from "express";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
-import { getRouteDetails } from "../utils/getRouteDetails.js";
+import { createRide } from '../controllers/rideCountroller.js';
 
 const router = express.Router();
 
 // In-memory storage for active rides and scheduled rides
 const activeRides = new Map();
 const scheduledRides = new Map();
+
+// Calculate fare based on distance
+const calculateFare = (distanceText) => {
+  const distanceKm = parseFloat(distanceText.split(' ')[0]);
+  return Math.round(distanceKm * 68); // 1km = 68
+};
+
 
 // Google Maps Places Autocomplete endpoint
 router.get("/autocomplete", async (req, res) => {
@@ -157,8 +164,6 @@ router.post("/rides/schedule", async (req, res) => {
     });
   }
 });
-
-// Get scheduled rides endpoint
 
 // In your routes file (location.js or similar)
 router.get("/rides/scheduled", (req, res) => {
@@ -380,5 +385,9 @@ router.get("/reverse-geocode", async (req, res) => {
     });
   }
 });
+
+
+// POST /api/rides
+router.post('/createride',createRide);
 
 export default router;

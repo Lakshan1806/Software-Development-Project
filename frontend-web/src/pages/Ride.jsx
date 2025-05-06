@@ -3,7 +3,6 @@ import axios from "axios";
 import ridecar from "../assets/Ride-pics/ridecar.svg";
 import Earnings from "./Earnings";
 import { useNavigate } from "react-router-dom";
-import Communication from "./Communication";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -52,6 +51,7 @@ const LocationIcon = () => (
   </svg>
 );
 
+
 function Ride() {
   const [pickup, setPickup] = useState("");
   const [dropoff, setDropoff] = useState("");
@@ -75,6 +75,7 @@ function Ride() {
   const [isScheduling, setIsScheduling] = useState(false);
   const [scheduledRides, setScheduledRides] = useState([]);
   const [showScheduledRides, setShowScheduledRides] = useState(false);
+  const [fare, setFare] = useState(null);
 
   const pickupRef = useRef(null);
   const dropoffRef = useRef(null);
@@ -224,6 +225,7 @@ const fetchScheduledRides = async () => {
       const response = await axios.get(
         `http://localhost:5000/location/reverse-geocode?lat=${latitude}&lng=${longitude}`
       );
+     
 
       if (response.data.status === "SUCCESS") {
         setPickup(response.data.address);
@@ -352,6 +354,11 @@ const fetchScheduledRides = async () => {
         setRouteDetails(response.data);
         setMapUrl(response.data.map_embed_url);
         setRideId(response.data.rideId);
+        // Calculate fare based on distance (1km = 100rs)
+      const distanceKm = parseFloat(response.data.distance.split(' ')[0]);
+      const calculatedFare = Math.round(distanceKm * 68);
+      setFare(calculatedFare);
+
       } else {
         throw new Error(
           response.data.message || "Failed to fetch route details"
@@ -404,8 +411,32 @@ const fetchScheduledRides = async () => {
       setIsScheduling(false);
     }
   };
+//database
+  const handleStartRide = async() => {
+    try{
+      const distanceKm = routeDetails ? parseFloat(routeDetails.distance.split(' ')[0]) : 0;
+      const calculatedFare = Math.round(distanceKm * 100);
+      const response=await axios.post(
+          'http://localhost:5000/api/rideRoute/createride'
+        ,{
+          
+          userId: "65a1b2c3d4e5f6a7b8c9d0e1", // Replace with actual user ID from auth
+          pickup,
+          dropoff,
+          startLocation: routeDetails?.start_location || { lat: 0, lng: 0 },
+          endLocation: routeDetails?.end_location || { lat: 0, lng: 0 },
+          distance: routeDetails?.distance || "0 km",
+          duration: routeDetails?.duration || "0 mins",
+           fare: calculatedFare,
+          ridestatus: "pending",
+          scheduledTime: scheduledTime || null,
+          steps: routeDetails?.steps || []
 
-  const handleStartRide = () => {
+        })
+    }
+    catch(error){
+
+    }
     startLiveTracking();
     const simulationInterval = setInterval(simulateDriverMovement, 3000);
     return () => clearInterval(simulationInterval);
@@ -431,7 +462,7 @@ const fetchScheduledRides = async () => {
 
   return (
     <div className="bg-white min-h-screen overflow-x-hidden w-full max-w-screen">
-      <Communication/>
+      
       <Earnings/>
 
       <div className="flex flex-col lg:flex-row items-center justify-center gap-8 px-4 py-8 md:px-8">
@@ -678,6 +709,11 @@ const fetchScheduledRides = async () => {
                   <p className="mt-2 text-lg font-medium text-[#FFD12E]">
                     Distance: {routeDetails.distance}
                   </p>
+                  {fare && (
+        <p className="mt-1 text-xl font-bold text-white">
+          Estimated Fare: Rs. {fare}
+        </p>
+      )}
                 </div>
 
                 {isTracking && (

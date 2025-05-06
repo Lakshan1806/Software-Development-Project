@@ -10,6 +10,7 @@ const rideSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  
   dropoff: {
     type: String,
     required: true
@@ -34,14 +35,17 @@ const rideSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  status: {
+  fare: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  ridestatus: {
     type: String,
     enum: ['pending', 'in_progress', 'completed', 'cancelled', 'scheduled'],
     default: 'pending'
   },
-  scheduledTime: {
-    type: Date
-  },
+  
   steps: [{
     distance: { text: String, value: Number },
     duration: { text: String, value: Number },

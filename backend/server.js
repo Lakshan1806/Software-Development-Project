@@ -11,6 +11,7 @@ import { fileURLToPath } from "url";
 import locationRoutes from "./routes/locationRoute.js";
 import { createServer } from "http";
 import initializeSocket from "./utils/socketServer.js";
+import RideRoute from "./routes/locationRoute.js"
 
 import session from "express-session";
 import authRouter from "./routes/authRoutes.js";
@@ -100,6 +101,7 @@ app.use("/location", locationRoutes);
 
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRoutes);
+app.use("/api/rideRoute",RideRoute);
 
 async function startServer() {
   await connectDB();
