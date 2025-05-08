@@ -3,18 +3,15 @@ import PromoCode from "../models/PromoCode.js";
 
 const router = express.Router();
 
-// Create a new promo code
 router.post("/create", async (req, res) => {
   try {
     const { code, discount, expirationDate, usageLimit } = req.body;
 
-    // Check if promo code already exists
     const existingPromo = await PromoCode.findOne({ code });
     if (existingPromo) {
       return res.status(400).json({ message: "Promo code already exists" });
     }
 
-    // Create a new promo code if not found
     const newPromo = new PromoCode({ code, discount, expirationDate, usageLimit });
     await newPromo.save();
     
@@ -24,7 +21,6 @@ router.post("/create", async (req, res) => {
   }
 });
 
-// Get all promo codes
 router.get("/all", async (req, res) => {
   try {
     const promos = await PromoCode.find();
@@ -34,7 +30,6 @@ router.get("/all", async (req, res) => {
   }
 });
 
-// Validate a promo code
 router.post("/validate", async (req, res) => {
   try {
     const { code } = req.body;
@@ -63,7 +58,6 @@ router.post("/validate", async (req, res) => {
   }
 });
 
-// Apply promo code
 router.post("/apply", async (req, res) => {
   try {
     const { code } = req.body;

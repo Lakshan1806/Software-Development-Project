@@ -15,14 +15,16 @@ import EmailForm from "../pages/EmailForm";
 import ForgotPasswordPage from "../pages/ForgotPasswordPage.jsx";
 import ResetpasswordPage from "../pages/ResetPasswordPage.jsx";
 import CreatePromoPage from "../pages/CreatePromoPage.jsx";
+import ChatAndCall from "../pages/ChatAndCall.jsx";
 function RouteSelect() {
 
-  const userId = "123456"; 
+  const userId = localStorage.getItem("userId");
 
   return (
     <div>
       <main className="h-dvh ">
         <Routes>
+          <Route path="/chat" element={<ChatAndCall />} />
           <Route path="/" element={<Home />} />
           <Route path="/rent" element={<Rent />} />
           <Route path="/drive" element={<Drive />} />
