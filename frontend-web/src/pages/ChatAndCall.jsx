@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import io from "socket.io-client";
 import axios from "axios";
 
@@ -11,22 +11,156 @@ const ChatAndCall = () => {
   const [messages, setMessages] = useState([]);
   const [userInput, setUserInput] = useState("");
   const [driverInput, setDriverInput] = useState("");
+  const [inCall, setInCall] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+
+  const localAudioRef = useRef();
+  const remoteAudioRef = useRef();
+  const peerConnection = useRef(null);
+  const localStream = useRef(null);
+
+  const servers = {
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+  };
+
+  const logCall = async (status) => {
+    if (!userId || !driverId) return;
+    try {
+      await axios.post("http://localhost:5000/api/call-log", {
+        userId,
+        driverId,
+        callType: "audio",
+        callStatus: status,
+      });
+    } catch (err) {
+      console.error("Failed to log call", err);
+    }
+  };
 
   useEffect(() => {
-    if (roomId) {
-      socket.emit("join-room", { roomId });
+    if (!roomId) return;
 
-      axios.get(`http://localhost:5000/api/messages/${roomId}`).then((res) => {
-        setMessages(res.data);
+    socket.emit("join-room", { roomId });
+
+    axios.get(`http://localhost:5000/api/messages/${roomId}`).then((res) => {
+      setMessages(res.data);
+    });
+
+    socket.on("receive-message", (data) => {
+      setMessages((prev) => [...prev, data]);
+    });
+
+    socket.on("call-made", async ({ offer, socket: from }) => {
+      await setupMedia();
+      peerConnection.current = new RTCPeerConnection(servers);
+      addLocalTracks();
+
+      peerConnection.current.ontrack = ({ streams: [stream] }) => {
+        remoteAudioRef.current.srcObject = stream;
+      };
+
+      peerConnection.current.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit("ice-candidate", {
+            to: from,
+            candidate: event.candidate,
+          });
+        }
+      };
+
+      await peerConnection.current.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await peerConnection.current.createAnswer();
+      await peerConnection.current.setLocalDescription(answer);
+
+      socket.emit("make-answer", {
+        answer,
+        to: from,
       });
 
-      socket.on("receive-message", (data) => {
-        setMessages((prev) => [...prev, data]);
-      });
+      setInCall(true);
+      await logCall("started");
+    });
 
-      return () => socket.disconnect();
-    }
+    socket.on("answer-made", async ({ answer }) => {
+      await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
+      setInCall(true);
+    });
+
+    socket.on("ice-candidate", ({ candidate }) => {
+      if (peerConnection.current) {
+        peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+    });
+
+    return () => {
+      socket.off("receive-message");
+      socket.off("call-made");
+      socket.off("answer-made");
+      socket.off("ice-candidate");
+    };
   }, [roomId]);
+
+  const setupMedia = async () => {
+    localStream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+    localAudioRef.current.srcObject = localStream.current;
+  };
+
+  const addLocalTracks = () => {
+    localStream.current.getTracks().forEach((track) => {
+      peerConnection.current.addTrack(track, localStream.current);
+    });
+  };
+
+  const initiateCall = async () => {
+    await setupMedia();
+    peerConnection.current = new RTCPeerConnection(servers);
+    addLocalTracks();
+
+    peerConnection.current.ontrack = ({ streams: [stream] }) => {
+      remoteAudioRef.current.srcObject = stream;
+    };
+
+    peerConnection.current.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.emit("ice-candidate", {
+          to: driverId,
+          candidate: event.candidate,
+        });
+      }
+    };
+
+    const offer = await peerConnection.current.createOffer();
+    await peerConnection.current.setLocalDescription(offer);
+
+    socket.emit("call-user", {
+      offer,
+      to: driverId,
+    });
+
+    setInCall(true);
+    await logCall("started");
+  };
+
+  const endCall = async () => {
+    if (peerConnection.current) {
+      peerConnection.current.close();
+      peerConnection.current = null;
+    }
+
+    if (localStream.current) {
+      localStream.current.getTracks().forEach((track) => track.stop());
+    }
+
+    setInCall(false);
+    await logCall("completed");
+  };
+
+  const toggleMute = () => {
+    if (localStream.current) {
+      localStream.current.getAudioTracks()[0].enabled = isMuted;
+      setIsMuted(!isMuted);
+    }
+  };
 
   const handleRoomIdGeneration = () => {
     if (userId && driverId) {
@@ -38,118 +172,127 @@ const ChatAndCall = () => {
   const sendMessage = async (sender, receiver, message, clearInput) => {
     if (!message.trim()) return;
 
-    const newMsg = {
-      senderId: sender,
-      receiverId: receiver,
-      message,
-      roomId,
-    };
-
+    const newMsg = { senderId: sender, receiverId: receiver, message, roomId };
     socket.emit("send-message", newMsg);
     await axios.post("http://localhost:5000/api/messages", newMsg);
     clearInput("");
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-white text-center p-4">
-      {/* User and Driver ID Inputs */}
-      <div className="mb-5">
+    <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-gradient-to-br from-gray-100 to-white font-sans text-gray-900">
+      <h1 className="text-4xl font-light bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent mb-8">
+        UrbanMove Live Chat & Call
+      </h1>
+
+      <div className="flex flex-col sm:flex-row gap-4 items-center w-full max-w-3xl mb-8">
         <input
           type="text"
-          placeholder="Enter User ID"
+          placeholder="User ID"
           value={userId}
           onChange={(e) => setUserId(e.target.value)}
-          className="mb-2 p-3 border-2 border-gray-300 rounded-lg mr-2"
+          className="flex-1 p-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <input
           type="text"
-          placeholder="Enter Driver ID"
+          placeholder="Driver ID"
           value={driverId}
           onChange={(e) => setDriverId(e.target.value)}
-          className="mb-2 p-3 border-2 border-gray-300 rounded-lg mr-2"
+          className="flex-1 p-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
           onClick={handleRoomIdGeneration}
-          className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded-lg"
+          className="bg-blue-600 text-white px-5 py-3 rounded-xl font-medium hover:bg-blue-700 transition-all shadow-md"
         >
           Start Chat
         </button>
       </div>
 
-      {/* Room ID display */}
-      {roomId && <h2 className="text-xl mb-4 text-gray-800">Room ID: {roomId}</h2>}
+      {roomId && (
+        <>
+          <div className="text-lg font-semibold mb-4 text-gray-700">
+            Room ID: <span className="font-mono">{roomId}</span>
+          </div>
+          <div className="flex gap-4 mb-8">
+            <button
+              onClick={initiateCall}
+              disabled={inCall}
+              className="bg-green-500 text-white px-5 py-2 rounded-xl font-semibold hover:bg-green-600 disabled:opacity-50 transition-all"
+            >
+              📞 Start Call
+            </button>
+            <button
+              onClick={toggleMute}
+              disabled={!inCall}
+              className="bg-yellow-400 text-white px-5 py-2 rounded-xl font-semibold hover:bg-yellow-500 disabled:opacity-50 transition-all"
+            >
+              {isMuted ? "🔊 Unmute" : "🔇 Mute"}
+            </button>
+            <button
+              onClick={endCall}
+              disabled={!inCall}
+              className="bg-red-500 text-white px-5 py-2 rounded-xl font-semibold hover:bg-red-600 disabled:opacity-50 transition-all"
+            >
+              ❌ End Call
+            </button>
+          </div>
+        </>
+      )}
 
-      {/* Chat Box */}
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 600,
-          height: 250,
-          overflowY: "auto",
-          border: "2px solid #00A896",
-          borderRadius: 10,
-          padding: 10,
-          backgroundColor: "#ffffff",
-          color: "#05668D",
-          marginBottom: 20,
-        }}
-      >
+      <div className="w-full max-w-3xl h-72 overflow-y-auto border border-gray-200 rounded-2xl bg-white p-6 shadow-inner mb-8 space-y-3">
         {messages.map((msg, idx) => (
-          <div key={idx} style={{ marginBottom: 5 }}>
-            <b style={{ color: msg.senderId === userId ? "#05668D" : "#00A896" }}>
+          <div key={idx} className="text-sm">
+            <span className="font-semibold text-blue-600">
               {msg.senderId === userId ? "User" : "Driver"}:
-            </b>{" "}
-            {msg.message}
+            </span>{" "}
+            <span className="text-gray-800">{msg.message}</span>
           </div>
         ))}
       </div>
 
-      {/* Message Input Sections */}
-      <div className="flex flex-col md:flex-row gap-10">
-        {/* User Input */}
-        <div className="flex flex-col items-center w-full md:w-1/2">
-          <h3 className="mb-2 font-semibold text-gray-700">User</h3>
+      <div className="flex flex-col sm:flex-row gap-10 w-full max-w-4xl">
+        <div className="flex flex-col flex-1">
+          <label className="text-sm font-semibold mb-1 text-gray-700">User Message</label>
           <input
             type="text"
-            placeholder="User: Type a message..."
+            placeholder="Type a message..."
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
             onKeyDown={(e) =>
-              e.key === "Enter" &&
-              sendMessage(userId, driverId, userInput, setUserInput)
+              e.key === "Enter" && sendMessage(userId, driverId, userInput, setUserInput)
             }
-            className="w-full p-2 border-2 border-yellow-400 rounded mb-2"
+            className="p-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
           />
           <button
             onClick={() => sendMessage(userId, driverId, userInput, setUserInput)}
-            className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded"
+            className="bg-blue-600 text-white py-2 rounded-xl font-medium hover:bg-blue-700 transition-all shadow-md"
           >
             Send as User
           </button>
         </div>
 
-        {/* Driver Input */}
-        <div className="flex flex-col items-center w-full md:w-1/2">
-          <h3 className="mb-2 font-semibold text-gray-700">Driver</h3>
+        <div className="flex flex-col flex-1">
+          <label className="text-sm font-semibold mb-1 text-gray-700">Driver Message</label>
           <input
             type="text"
-            placeholder="Driver: Type a message..."
+            placeholder="Type a message..."
             value={driverInput}
             onChange={(e) => setDriverInput(e.target.value)}
             onKeyDown={(e) =>
-              e.key === "Enter" &&
-              sendMessage(driverId, userId, driverInput, setDriverInput)
+              e.key === "Enter" && sendMessage(driverId, userId, driverInput, setDriverInput)
             }
-            className="w-full p-2 border-2 border-orange-400 rounded mb-2"
+            className="p-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
           />
           <button
             onClick={() => sendMessage(driverId, userId, driverInput, setDriverInput)}
-            className="bg-gradient-to-r from-orange-400 to-yellow-400 text-white px-4 py-2 rounded"
+            className="bg-blue-600 text-white py-2 rounded-xl font-medium hover:bg-blue-700 transition-all shadow-md"
           >
             Send as Driver
           </button>
         </div>
       </div>
+
+      <audio ref={localAudioRef} autoPlay muted />
+      <audio ref={remoteAudioRef} autoPlay />
     </div>
   );
 };

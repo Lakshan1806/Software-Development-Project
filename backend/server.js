@@ -16,7 +16,8 @@ import authRouter from "./routes/authRoutes.js";
 import userRouter from "./routes/userRoutes.js";
 import http from "http";
 import { Server as SocketIOServer } from "socket.io";
-import messageRoutes from "./routes/messageRoutes.js";  // Import messageRoutes
+import messageRoutes from "./routes/messageRoutes.js";
+import callLogRoutes from "./routes/callLogRoutes.js";
 
 dotenv.config();
 
@@ -66,8 +67,7 @@ app.use("/feedback", feedbackRoutes);
 app.use("/api/history", historyRoutes);
 app.use("/api/email", emailRoutes);
 app.use("/api/promo", promoRoutes);
-
-// Use messageRoutes for API messages
+app.use("/api", callLogRoutes); 
 app.use("/api/messages", messageRoutes);
 
 const __filename = fileURLToPath(import.meta.url);

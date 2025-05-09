@@ -1,10 +1,9 @@
-// routes/messageRoutes.js
 import express from "express";
 import Message from "../models/Message.js";
 
 const router = express.Router();
 
-// GET all messages by roomId
+
 router.get("/:roomId", async (req, res) => {
   try {
     const { roomId } = req.params;
@@ -15,7 +14,7 @@ router.get("/:roomId", async (req, res) => {
   }
 });
 
-// POST a new message
+
 router.post("/", async (req, res) => {
   try {
     const { senderId, receiverId, message, roomId } = req.body;
