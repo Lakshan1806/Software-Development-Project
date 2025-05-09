@@ -1,17 +1,17 @@
-import CarInstance from "../models/carInstance.model";
-import CarModel from "../models/carModel.model";
-import Booking from "../models/rental.model";
+import CarInstance from "../models/carInstance.model.js";
+import CarModel from "../models/carModel.model.js";
+import Booking from "../models/carBookings.model.js";
 
-exports.getAvailableCars = async (req, res) => {
+export const getAvailableCars = async (req, res) => {
   const { pickupLocation, dropoffLocation, pickupTime, dropoffTime } = req.query;
-
+  console.log(pickupLocation);
   try {
     const availableInstances = await CarInstance.find({
-      city: pickupLocation,
-      isAvailable: true,
+      location: pickupLocation,
+      status: "Available",
     });
 
-    const carModelIds = availableInstances.map(inst => inst.carModelId);
+    const carModelIds = availableInstances.map(inst => inst.carID);
     const carModels = await CarModel.find({ _id: { $in: carModelIds } });
 
     res.status(200).json({
@@ -29,8 +29,15 @@ exports.getAvailableCars = async (req, res) => {
   }
 };
 
-exports.bookCar = async (req, res) => {
-  const { carInstanceId, pickupLocation, dropoffLocation, pickupTime, dropoffTime, userId } = req.body;
+export const bookCar = async (req, res) => {
+  const {
+    carInstanceId,
+    pickupLocation,
+    dropoffLocation,
+    pickupTime,
+    dropoffTime,
+    userId,
+  } = req.body;
 
   try {
     const carInstance = await CarInstance.findById(carInstanceId);
@@ -39,10 +46,11 @@ exports.bookCar = async (req, res) => {
     }
 
     carInstance.isAvailable = false;
+    carInstance.status = "Booked";
     await carInstance.save();
 
     const booking = new Booking({
-      carInstanceId,
+      carID: carInstance.carID,
       pickupLocation,
       dropoffLocation,
       pickupTime,
@@ -54,6 +62,7 @@ exports.bookCar = async (req, res) => {
 
     res.status(200).json({ message: "Booking successful" });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Error processing booking" });
   }
 };

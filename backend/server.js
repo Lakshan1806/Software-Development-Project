@@ -13,6 +13,8 @@ import passport from "passport";
 import MongoStore from "connect-mongo";
 import "./config/passport.js";
 import fs from "fs";
+import userRoutes from "./routes/userRoute.js";
+import carRoutes from "./routes/carRoutes.js";
 
 const PORT = 5000;
 dotenv.config();
@@ -83,7 +85,7 @@ app.use(
 app.use(cookieParser());
 app.use("/admin", adminRoutes);
 app.use("/user", userRoutes);
-//app.use ("/cars", carRoutes);
+app.use("/api/cars", carRoutes);
 
 console.log(process.env.MONGO_URI);
 console.log("server is ready");

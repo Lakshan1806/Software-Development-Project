@@ -1,7 +1,7 @@
 import express from "express";
 import feedbackController from "../controllers/rent/feedbackController.js";
 import rentalController from "../controllers/rent/rentalController.js";
-import getAvailableCars from "../controllers/caroptionsController.js";
+
 
 const userRoutes = express.Router();
 // Create a new rental
@@ -25,6 +25,6 @@ userRoutes.post("/submit",feedbackController.submit );
 
 userRoutes.get("/slideshow_images", rentalController.fetchSlideshowImage);
 
-userRoutes.get("/availableCars", getAvailableCars);
+
 
 export default userRoutes; 
