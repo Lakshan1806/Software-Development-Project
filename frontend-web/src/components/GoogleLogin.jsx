@@ -2,12 +2,12 @@ import React from "react";
 import imgg from "../signup_photos/googlelogo.svg";
 import { useAuth } from "../context/AuthContext";
 
-export default function GoogleLoginButton() {
+export default function GoogleLoginButton({ intent = "login" }) {
   const { loginWithGoogle } = useAuth();
 
   const handleClick = () => {
     try {
-      loginWithGoogle();
+      loginWithGoogle(intent);
     } catch (error) {
       console.error("Google login error:", error);
     }
@@ -20,7 +20,7 @@ export default function GoogleLoginButton() {
     >
       <>
         <img src={imgg} alt="Google" className="inline-block mr-2 h-5 w-5" />
-        Sign in with Google
+        {intent === "signup" ? "Sign up with Google" : "Sign in with Google"}
       </>
     </button>
   );

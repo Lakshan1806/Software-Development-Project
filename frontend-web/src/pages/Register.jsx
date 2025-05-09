@@ -48,9 +48,9 @@ const Register = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/auth/resend-otp",
-        { phone: formData.phoneNumber },
-        { withCredentials: true }
+        "/auth/resend-otp",
+        { phone: formData.phoneNumber }
+        
       );
 
       if (response.data.message.includes("sent to phone")) {
@@ -72,9 +72,9 @@ const Register = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/auth/resend-otp",
-        { email: formData.email },
-        { withCredentials: true }
+        "/auth/resend-otp",
+        { email: formData.email }
+        
       );
 
       if (response.data.message.includes("sent to email")) {
@@ -102,51 +102,49 @@ const Register = () => {
     try {
       if (step === 1) {
         await axios.post(
-          "http://localhost:5000/api/auth/register",
+          "/auth/register",
           {
             username: formData.username,
-            password: formData.password,
-          },
-          { withCredentials: true }
+            password: formData.password
+          }
+        
         );
         setStep(2);
       } else if (step === 2) {
         await axios.post(
-          "http://localhost:5000/api/auth/register",
+          "/auth/register",
           {
-            phoneNumber: formData.phoneNumber,
-          },
-          { withCredentials: true }
+            phoneNumber: formData.phoneNumber
+          }
+          
         );
         startPhoneTimer();
         setStep(3);
       } else if (step === 3) {
         await axios.post(
-          "http://localhost:5000/api/auth/register",
+          "/auth/register",
           {
-            otp: formData.otp,
-          },
-          { withCredentials: true }
+            otp: formData.otp
+          }
+          
         );
         resetPhoneTimer();
         setStep(4);
       } else if (step === 4) {
         await axios.post(
-          "http://localhost:5000/api/auth/register",
+          "/auth/register",
           {
-            email: formData.email,
-          },
-          { withCredentials: true }
+            email: formData.email
+          }
         );
         startEmailTimer();
         setStep(5);
       } else if (step === 5) {
         await axios.post(
-          "http://localhost:5000/api/auth/register",
+          "/auth/register",
           {
-            emailOTP: formData.emailOTP,
-          },
-          { withCredentials: true }
+            emailOTP: formData.emailOTP
+          }
         );
         resetEmailTimer();
         setStep(6);
@@ -219,7 +217,7 @@ const Register = () => {
               </div>
 
               <img src={imgl} alt="Divider" className="w-full h-auto" />
-              <GoogleLoginButton />
+              <GoogleLoginButton intent="signup" />
               <p className="pt-[15px] font-sans bg-gradient-to-r from-[#FFD12E] to-[#FF7C1D] text-transparent bg-clip-text font-[400] text-[20px] text-center">
                 <Link to="/signin">Already have an account? Sign in</Link>
               </p>

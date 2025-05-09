@@ -12,29 +12,59 @@ passport.use(
       passReqToCallback: true,
     },
     async (req, accessToken, refreshToken, profile, done) => {
-     try {
-      const email = profile.emails[0].value;
-      let user = await userModel.findOne({
-        $or: [{ googleId: profile.id }, { email }],
-      });
-      if (!user) {
-        user = await userModel.create({
+      try {
+        const email = profile.emails[0].value;
+
+        const terminatedUser = await userModel.findOne({
+          email,
+          isTerminated: true
+        });
+        if (terminatedUser) {
+          return done(null, false, { message: "Account terminated" });
+        }
+        
+        const existingGoogleUser = await userModel.findOne({
+          googleId: profile.id,
+        });
+        if (existingGoogleUser) {
+          return done(null, existingGoogleUser);
+        }
+
+        const existingLocalUser = await userModel.findOne({
+          email,
+          authMethod: "local",
+        });
+
+        if (existingLocalUser) {
+          existingLocalUser.googleId = profile.id;
+          existingLocalUser.authMethod = "google";
+          existingLocalUser.password = undefined;
+          existingLocalUser.isAccountVerified = true;
+          existingLocalUser.avatar = profile.photos[0]?.value;
+          await existingLocalUser.save({ validateBeforeSave: false });
+          logger.info(`Converted local user to Google auth: ${email}`);
+          return done(null, existingLocalUser);
+        }
+
+        const newUser = await userModel.create({
           googleId: profile.id,
           username: profile.displayName,
           email,
           avatar: profile.photos[0]?.value,
           authMethod: "google",
-          isAccountVerified: true,
-          createdAt: new Date(),
+          isAccountVerified: false,
+          phone: `google-${profile.id}`
         });
-        logger.info(`New google user created: ${user.email}`);
+
+        logger.info(
+          `New google user created (pending phone verification): ${email}`
+        );
+        done(null, newUser);
+      } catch (error) {
+        logger.error(`Error in Google strategy: ${error.message}`);
+        done(error, null);
       }
-      done(null, user);
-    } catch (error) {
-      logger.error(`Error in Google strategy: ${error.message}`);
-      done(error, null);
     }
-  }
   )
 );
 

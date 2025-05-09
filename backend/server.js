@@ -8,7 +8,7 @@ import cookieParser from "cookie-parser";
 import path from "path";
 import { fileURLToPath } from "url";
 import session from "express-session";
-import authRouter from "./routes/authRoutes.js";
+import userRoutes from "./routes/userRoute.js";
 import passport from "passport";
 import MongoStore from "connect-mongo";
 import "./config/passport.js";
@@ -44,10 +44,10 @@ app.use(
       sameSite: "strict",
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     },
-    store: MongoStore.create({ // Add session store
+    store: MongoStore.create({
       mongoUrl: process.env.MONGO_URI,
-      collectionName: 'sessions'
-    })
+      collectionName: "sessions",
+    }),
   })
 );
 app.use(passport.initialize());
@@ -57,7 +57,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-app.use("/auth/", authRouter);
+app.use("/auth", userRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);
@@ -75,12 +75,6 @@ console.log(path.join(__dirname, "/uploads"));
 
 
 app.use(express.json());
-app.use(
-  cors({
-    origin: "http://localhost:5173",
-    credentials: true,
-  })
-);
 
 app.use(cookieParser());
 app.use("/admin", adminRoutes);
@@ -91,7 +85,7 @@ console.log(process.env.MONGO_URI);
 console.log("server is ready");
 console.log("Current Working Directory:", process.cwd());
 
-app.use("/api/auth", authRouter);
+//app.use("/api/auth", userRoutes);
 app.use("/api/admin", adminRoutes);
 
 async function startServer() {
