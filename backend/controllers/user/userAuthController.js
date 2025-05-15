@@ -1,19 +1,18 @@
 import dotenv from "dotenv";
-import hashPassword from "../utils/hashPassword.js";
-import generateJwtToken from "../utils/generateJWTToken.js";
-import checkExistingUser from "../utils/checkExistingUser.js";
-import validateOtp from "../utils/validateOtp.js";
-import saveSession from "../utils/saveSession.js";
-import sendOtp from "../utils/sendOtp.js";
-import userModel from "../models/usermodel.js";
-import otpModel from "../models/otpModels.js";
-import nodemailer from "../utils/nodemailer.js";
-import clearTempUserSession from "../utils/clearTempUserSession.js";
+import hashPassword from "../../utils/hashPassword.js";
+import generateJwtToken from "../../utils/generateJWTToken.js";
+import checkExistingUser from "../../utils/checkExistingUser.js";
+import validateOtp from "../../utils/validateOtp.js";
+import saveSession from "../../utils/saveSession.js";
+import sendOtp from "../../utils/sendOtp.js";
+import userModel from "../../models/usermodel.js";
+import otpModel from "../../models/otpModels.js";
+import nodemailer from "../../utils/nodemailer.js";
+import clearTempUserSession from "../../utils/clearTempUserSession.js";
 import bcrypt from "bcrypt";
-import crypto from "crypto";
 
 dotenv.config();
-const userController = {
+const userAuthController = {
   register: async (req, res) => {
     if (!req.session) {
       return res.status(500).json({ message: "Session is not initialized" });
@@ -214,12 +213,14 @@ const userController = {
       return res.status(500).json({ message: "Session is not initialized" });
     }
 
-    const { username, password, otp: phoneOTP } = req.body;
+    const { username, password, phone: phoneNumber, otp: phoneOTP } = req.body;
     if (username && password) {
       req.session.tempUser = {};
     }
     let userSession = req.session.tempUser || {};
+
     try {
+      // STAGE 1: Verify username and password
       if (!userSession.username && !userSession.password) {
         if (!username || !password) {
           return res
@@ -234,6 +235,12 @@ const userController = {
             authMethod: user?.authMethod || "none",
           });
         }
+        if ( user.isTerminated) {
+          return res.status(401).json({ 
+            message: " account terminated" 
+          });
+        }
+
         if (!user || !bcrypt.compare(password, user.password)) {
           if (user) {
             const isMatch = bcrypt.compare(password, user.password);
@@ -252,34 +259,62 @@ const userController = {
           });
         }
 
-        req.session.tempUser = { username, password };
-        const phoneNumber = user.phone;
+        req.session.tempUser = { username, password, userId: user._id };
+        await req.session.save();
+
+        return res.status(200).json({
+          message:
+            "Username and password verified. Please provide your phone number.",
+          nextStep: "provide_phone",
+        });
+      }
+
+      // STAGE 2: Verify phone number matches user's record
+      if (userSession.username && !userSession.phoneNumber) {
         if (!phoneNumber) {
+          return res.status(400).json({ message: "Phone number is required" });
+        }
+        const phoneRegex = /^(0|94|\+94)?(7[0-9])([0-9]{7})$/;
+
+        if (!phoneRegex.test(phoneNumber)) {
           return res
             .status(400)
-            .json({ message: "Phone number not found for the user" });
+            .json({ message: "Invalid phone number format" });
         }
 
-        try {
-          await sendOtp({ body: { type: "phone", phone: phoneNumber } }, res);
-        } catch (error) {
-          return res
-            .status(500)
-            .json({ message: "Failed to send OTP", error: error.message });
+        const user = await userModel.findById(userSession.userId);
+        if (!user) {
+          clearTempUserSession(req.session);
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        if (user.phone !== phoneNumber) {
+          return res.status(400).json({
+            message: "Phone number does not match our records",
+            hint: "Please enter the phone number associated with this account",
+          });
         }
 
         req.session.tempUser.phoneNumber = phoneNumber;
         await req.session.save();
+
+        try {
+          await sendOtp({ body: { type: "phone", phone: phoneNumber } }, res);
+        } catch (error) {
+          return res.status(500).json({
+            message: "Failed to send OTP",
+            error: error.message,
+          });
+        }
+
         return res.status(200).json({
           message: "OTP sent to your phone. Please verify to continue.",
+          nextStep: "verify_otp",
         });
       }
 
-      if (
-        userSession.username &&
-        userSession.phoneNumber &&
-        !userSession.phoneVerified
-      ) {
+      // STAGE 3: Verify OTP
+      if (userSession.phoneNumber && !userSession.phoneVerified) {
         if (!phoneOTP) {
           return res.status(400).json({ message: "Phone OTP is required" });
         }
@@ -299,9 +334,7 @@ const userController = {
         req.session.tempUser.phoneVerified = true;
         await req.session.save();
 
-        const user = await userModel.findOne({
-          username: userSession.username,
-        });
+        const user = await userModel.findById(userSession.userId);
         const token = generateJwtToken(user._id, user.username);
 
         res.cookie("token", token, {
@@ -325,10 +358,7 @@ const userController = {
         .json({ message: "Invalid request or process step." });
     } catch (error) {
       const errorMessage =
-        error && error.message
-          ? error.message
-          : "An unexpected server error occurred";
-
+        error?.message || "An unexpected server error occurred";
       if (!res.headersSent) {
         return res.status(500).json({ message: errorMessage });
       }
@@ -357,108 +387,6 @@ const userController = {
         .json({ message: "Server error during logout", error: error.message });
     }
   },
-
-  isAuthenticated: async (req, res) => {
-    try {
-      if (req.body.userId) {
-        const user = await userModel
-          .findById(req.body.userId)
-          .select("-password -__v");
-        return res.json({ success: true, user });
-      } else {
-        return res
-          .status(401)
-          .json({ success: false, message: "Not authenticated" });
-      }
-    } catch (error) {
-      return res.status(500).json({ success: false, message: "Server error" });
-    }
-  },
-
-  forgotPassword: async (req, res) => {
-    const { email } = req.body;
-    try {
-      const user = await userModel.findOne({ email });
-
-      if (!user) {
-        return res
-          .status(400)
-          .json({ success: false, message: "User not found" });
-      }
-
-      const resetToken = crypto.randomBytes(20).toString("hex");
-      const resetTokenExpiresAt = Date.now() + 1 * 60 * 60 * 1000; // 1 hour
-
-      user.resetPasswordToken = resetToken;
-      user.resetPasswordExpiresAt = resetTokenExpiresAt;
-
-      await user.save();
-
-      try {
-        await nodemailer.sendPasswordResetEmail(
-          user.email,
-          `${process.env.CLIENT_URL}/reset-password/${resetToken}`
-        );
-      } catch (error) {
-        return res.status(500).json({
-          message: "Failed to send Reset email",
-          error: error.message,
-        });
-      }
-      res.status(200).json({
-        success: true,
-        message: "Password reset link sent to your email",
-      });
-    } catch (error) {
-      res.status(400).json({ success: false, message: error.message });
-    }
-  },
-
-  resetPassword: async (req, res) => {
-    try {
-      const { token } = req.params;
-      const { password } = req.body;
-
-      const user = await userModel.findOne({
-        resetPasswordToken: token,
-        resetPasswordExpiresAt: { $gt: Date.now() },
-      });
-
-      if (!user) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Invalid or expired reset token" });
-      }
-
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      const result = await userModel.updateOne(
-        { _id: user._id },
-        {
-          $set: {
-            password: hashedPassword,
-            resetPasswordToken: undefined,
-            resetPasswordExpiresAt: undefined,
-          },
-        }
-      );
-
-      if (result.modifiedCount === 0) {
-        throw new Error("Failed to update password");
-      }
-
-      const updatedUser = await userModel.findById(user._id);
-
-      await nodemailer.sendResetSuccessEmail(updatedUser.email);
-
-      res
-        .status(200)
-        .json({ success: true, message: "Password reset successful" });
-    } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
-    }
-  },
-
   resendOTP: async (req, res) => {
     try {
       const { email, phone } = req.body;
@@ -513,37 +441,141 @@ const userController = {
         .json({ message: "Failed to resend OTP", error: error.message });
     }
   },
-  getUserProfile: async (req, res) => {
+  isAuthenticated: async (req, res) => {
     try {
-      const user = await userModel
-        .findById(req.body.userId)
-        .select(
-          "-password -__v -resetPasswordToken -resetPasswordExpiresAt -verificationToken -verificationTokenExpiresAt"
-        );
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
+      if (req.body.userId) {
+        const user = await userModel
+          .findById(req.body.userId)
+          .select("-password -__v");
+        return res.json({ success: true, user });
+      } else {
+        return res
+          .status(401)
+          .json({ success: false, message: "Not authenticated" });
       }
-      const userData =
-        user.authMethod === "google"
-          ? {
-              _id: user._id,
-              name: user.name,
-              email: user.email,
-              avatar: user.avatar,
-              authMethod: user.authMethod,
-            }
-          : {
-              _id: user._id,
-              username: user.username,
-              email: user.email,
-              phone: user.phone,
-              authMethod: user.authMethod,
-            };
-
-      return res.json(userData);
     } catch (error) {
-      return res.status(500).json({ message: "Server error" });
+      return res.status(500).json({ success: false, message: "Server error" });
+    }
+  },
+  verifyGooglePhone: async (req, res) => {
+    try {
+      if (!req.session.tempUser || !req.session.tempUser.googleId) {
+        return res.status(400).json({
+          success: false,
+          message: "Google signup session expired",
+        });
+      }
+
+      const { phoneNumber, otp } = req.body;
+
+      if (!phoneNumber && !otp) {
+        return res.status(400).json({
+          success: false,
+          message: "Phone number or OTP is required",
+        });
+      }
+
+      if (phoneNumber && !otp) {
+        const phoneRegex = /^(0|94|\+94)?(7[0-9])([0-9]{7})$/;
+        if (!phoneRegex.test(phoneNumber)) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid phone number format",
+          });
+        }
+
+        const existingUser = await userModel.findOne({ phone: phoneNumber });
+        if (existingUser) {
+          return res.status(400).json({
+            success: false,
+            message: "Phone number already exists",
+          });
+        }
+
+        req.session.tempUser.phoneNumber = phoneNumber;
+        await req.session.save();
+
+        await sendOtp(
+          { body: { type: "phone", phone: phoneNumber } },
+          {
+            status: () => ({ json: () => {} }),
+          }
+        );
+
+        return res.status(200).json({
+          success: true,
+          message: "OTP sent to phone",
+        });
+      }
+
+      if (otp) {
+        if (!req.session.tempUser.phoneNumber) {
+          return res.status(400).json({
+            success: false,
+            message: "Phone number not found in session",
+          });
+        }
+
+        const isValidOtp = await validateOtp(
+          "phone",
+          req.session.tempUser.phoneNumber,
+          otp,
+          otpModel
+        );
+
+        if (!isValidOtp) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid or expired OTP",
+          });
+        }
+
+        const updatedUser = await userModel.findOneAndUpdate(
+          { googleId: req.session.tempUser.googleId },
+          {
+            phone: req.session.tempUser.phoneNumber,
+            isAccountVerified: true,
+          },
+          { new: true }
+        );
+
+        const token = generateJwtToken(updatedUser._id, updatedUser.username);
+
+        res.cookie("token", token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "strict",
+          maxAge: 3600000,
+        });
+
+        delete req.session.tempUser;
+        await req.session.save();
+
+        return res.status(200).json({
+          success: true,
+          message: "Phone verification successful",
+          user: {
+            _id: updatedUser._id,
+            username: updatedUser.username,
+            email: updatedUser.email,
+            phone: updatedUser.phone,
+            authMethod: updatedUser.authMethod,
+          },
+        });
+      }
+
+      return res.status(400).json({
+        success: false,
+        message: "Invalid request",
+      });
+    } catch (error) {
+      console.error("Google phone verification error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Server error",
+        error: error.message,
+      });
     }
   },
 };
-export default userController;
+export default userAuthController;

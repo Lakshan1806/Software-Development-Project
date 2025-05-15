@@ -16,7 +16,7 @@ import ForgotPasswordPage from "../pages/ForgotPasswordPage.jsx";
 import ResetpasswordPage from "../pages/ResetPasswordPage.jsx";
 import Profile from "../pages/profile.jsx";
 import ProtectedRoute from "./ProtectedRoute";
-
+import GooglePhoneVerification from "../pages/GooglePhoneVerification.jsx";
 function RouteSelect() {
   const userId = "123456"; // Replace this with actual logged-in user ID
 
@@ -53,6 +53,7 @@ function RouteSelect() {
               </ProtectedRoute>
             }
           />{" "}
+          <Route path="/verify-phone" element={<GooglePhoneVerification />} />
         </Routes>
       </main>
     </div>

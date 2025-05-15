@@ -1,4 +1,4 @@
-import Feedback from "../models/feedback.model.js"
+import Feedback from "../../models/feedback.model.js"
 
 
 const feedbackController = {

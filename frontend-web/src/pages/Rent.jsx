@@ -1,63 +1,294 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import myImage from "../assets/rent.image.1.png";
 import myImage2 from "../assets/rent.image.2.png";
 import myImage3 from "../assets/rent.image.3.png";
 import myImage4 from "../assets/rent.image.4.png";
-import slide1 from "../assets/rent.slide.1.png";
-import slide2 from "../assets/rent.slide.2.png";
-import slide3 from "../assets/rent.slide.3.png";
-import review1 from "../assets/rent.review.1.png";
-import review2 from "../assets/rent.review.2.png";
-import review3 from "../assets/rent.review.3.png";
-import review4 from "../assets/rent.review.4.png";
-import review5 from "../assets/rent.review.5.png";
-import review6 from "../assets/rent.review.6.png";
 import { Link } from "react-router-dom";
-import { Calendar, Clock, MapPin } from 'lucide-react';
+import axios from "axios";
+import CarSelection from "./CarSelection.jsx";
 
 
 
 function Rent() {
+  const [showForm, setShowForm] = useState(false);
+
+  const handleShowForm = () => {
+    setShowForm(true);
+    document.body.style.overflow = 'auto'; // prevent scroll
+  };
+
+  const handleCloseForm = () => {
+    setShowForm(false);
+    document.body.style.overflow = 'auto'; // re-enable scroll
+  };
+
   return (
-    <div className="p-4">
+    <div className="p-4 relative">
       <h1 className="text-2xl font-bold text-center">RENT</h1>
-      <div className="flex justify-center gap-4 mt-4">
-        <Button text="Renting Options" link="/rent-options" />
-        <Button text="Car Options" link="/car-options" />
-        <Button text="Reviews" link="/feedback" />
-      </div>
+
       <div className="flex flex-col items-center md:flex-row md:justify-between mt-10">
         <Image1 />
         <Text1 />
       </div>
-      <TransportationForm/>
-      <div className="flex justify-center gap-6 mt-12">
+
+      {!showForm && (
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={handleShowForm}
+            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition"
+          >
+            Rent Now
+          </button>
+        </div>
+      )}
+
+      {/* Image grid */}
+      <div className="flex justify-center gap-12 mt-12">
         <Image src={myImage2} />
         <Image src={myImage3} />
         <Image src={myImage4} />
       </div>
-      <AutoSlideshow />
-      <Review />
+
+      <Slideshow />
+
+      {/* Modal and Overlay */}
+      {showForm && (
+        <>
+          {/* Blurred background overlay */}
+          <div className="fixed inset-0  backdrop-blur"></div>
+
+          {/* Popup modal */}
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <div className="relative w-full max-w-xl">
+              {/* Close button */}
+              <button
+                onClick={handleCloseForm}
+                className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-xl font-bold z-10"
+              >
+                &times;
+              </button>
+
+              <RentNowForm onClose={handleCloseForm} />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
-function Button({ text, link }) {
+
+function RentNowForm() {
+  // List of available cities
+  const availableCities = [
+    "New York",
+    "Los Angeles",
+    "Chicago",
+    "Miami",
+    "San Francisco",
+  ];
+
+  const [formData, setFormData] = useState({
+    pickupLocation: "",
+    dropoffLocation: "",
+    pickupTime: "",
+    dropoffTime: "",
+  });
+
+  const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [availableCars, setAvailableCars] = useState([]);
+  const [searchParams, setSearchParams] = useState(null);
+  const [showCarSelection, setShowCarSelection] = useState(false);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+
+    // If we were showing cars and the user changes any form data,
+    // hide the car selection until they search again
+    if (showCarSelection) {
+      setShowCarSelection(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setMessage("");
+
+    try {
+      // Search for available cars
+      const response = await axios.get(
+        "http://localhost:5000/api/cars/available",
+        {
+          params: formData,
+        }
+      );
+
+      setAvailableCars(response.data.data.cars);
+      setSearchParams(response.data.data);
+      setShowCarSelection(true);
+
+      // If no cars are available, show a message
+      if (response.data.data.cars.length === 0) {
+        setMessage(
+          "No cars available for the selected time and location. Please try different dates or locations."
+        );
+      }
+    } catch (error) {
+      setMessage(
+        error.response?.data?.message || "Error searching for available cars"
+      );
+      setShowCarSelection(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <Link to={link} className="inline-block">
-      <button className="bg-transparent font-bold text-black p-2 rounded relative overflow-hidden group">
-        {text}
-        <span className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-200 to-orange-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
-      </button>
-    </Link>
+    <div className="min-h-screen  flex flex-col items-center p-4">
+      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 mb-6">
+        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
+          Rent Now
+        </h2>
+
+        {message && (
+          <div
+            className={`p-3 mb-4 rounded ${message.includes("Error") || message.includes("No cars") ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}
+          >
+            {message}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label
+              htmlFor="pickupLocation"
+              className="block text-gray-700 font-medium mb-2"
+            >
+              Pickup Location
+            </label>
+            <select
+              id="pickupLocation"
+              name="pickupLocation"
+              value={formData.pickupLocation}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            >
+              <option value="">Select Pickup City</option>
+              {availableCities.map((city) => (
+                <option key={`pickup-${city}`} value={city}>
+                  {city}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-4">
+            <label
+              htmlFor="dropoffLocation"
+              className="block text-gray-700 font-medium mb-2"
+            >
+              Drop-off Location
+            </label>
+            <select
+              id="dropoffLocation"
+              name="dropoffLocation"
+              value={formData.dropoffLocation}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            >
+              <option value="">Select Drop-off City</option>
+              {availableCities.map((city) => (
+                <option key={`dropoff-${city}`} value={city}>
+                  {city}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-4">
+            <label
+              htmlFor="pickupTime"
+              className="block text-gray-700 font-medium mb-2"
+            >
+              Pickup Time
+            </label>
+            <input
+              type="datetime-local"
+              id="pickupTime"
+              name="pickupTime"
+              value={formData.pickupTime}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          <div className="mb-6">
+            <label
+              htmlFor="dropoffTime"
+              className="block text-gray-700 font-medium mb-2"
+            >
+              Drop-off Time
+            </label>
+            <input
+              type="datetime-local"
+              id="dropoffTime"
+              name="dropoffTime"
+              value={formData.dropoffTime}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50"
+          >
+            {isLoading ? "Searching..." : "Find Available Cars"}
+          </button>
+        </form>
+      </div>
+
+      {showCarSelection && (
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {availableCars.map((car, index) => (
+      <div key={index} className="border rounded shadow p-4">
+        <img src={car.imageUrl} alt={car.model} className="w-full h-40 object-cover mb-2" />
+        <h3 className="text-lg font-bold">{car.brand} {car.model}</h3>
+        <p>Seats: {car.seats}</p>
+        <button
+          className="mt-2 bg-green-600 text-white px-4 py-2 rounded"
+          onClick={() => handleBooking(carInstances[index]._id)}
+        >
+          Book Now
+        </button>
+      </div>
+    ))}
+  </div>
+)}
+    </div>
   );
 }
+
 
 function Image1() {
   return (
     <div className="w-full md:w-1/2 flex justify-center">
-      <img src={myImage} alt="Car Rental" className="w-full max-w-sm md:max-w-md lg:max-w-lg" />
+      <img
+        src={myImage}
+        alt="Car Rental"
+        className="w-full max-w-sm md:max-w-md lg:max-w-lg"
+      />
     </div>
   );
 }
@@ -66,257 +297,66 @@ function Text1() {
   return (
     <div className="text-center md:text-left md:w-1/2 p-4">
       <h1 className="text-2xl md:text-4xl font-bold">
-        Browse our fleet and pick the perfect car for a day, a week, or even a month.
+        Browse our fleet and pick the perfect car for a day, a week, or even a
+        month.
       </h1>
     </div>
   );
 }
-
-const TransportationForm = () => {
-  // Available branches/cities
-  const locations = [
-    "Nuwarelliya",
-    "Galle",
-    "Colombo",
-    "Jaffna",
-    "Batticaloa"
-  ];
-
-  const [formData, setFormData] = useState({
-    pickupLocation: '',
-    dropoffLocation: '',
-    pickupDate: '',
-    pickupTime: '',
-    dropoffDate: '',
-    dropoffTime: '',
-  });
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Here you would handle form submission, e.g., API call
-    console.log('Form submitted:', formData);
-    alert('Booking request submitted successfully!');
-  };
-
-  return (
-    <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Book Your Transportation</h2>
-      
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Pickup Location */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            Pickup Branch
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MapPin className="h-5 w-5 text-gray-400" />
-            </div>
-            <select
-              name="pickupLocation"
-              value={formData.pickupLocation}
-              onChange={handleChange}
-              required
-              className="pl-10 block w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
-            >
-              <option value="">Select pickup location</option>
-              {locations.map((location) => (
-                <option key={`pickup-${location}`} value={location}>
-                  {location}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Dropoff Location */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            Drop-off Branch
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MapPin className="h-5 w-5 text-gray-400" />
-            </div>
-            <select
-              name="dropoffLocation"
-              value={formData.dropoffLocation}
-              onChange={handleChange}
-              required
-              className="pl-10 block w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
-            >
-              <option value="">Select drop-off location</option>
-              {locations.map((location) => (
-                <option key={`dropoff-${location}`} value={location}>
-                  {location}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Pickup Date & Time */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Pickup Date
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Calendar className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="date"
-                name="pickupDate"
-                value={formData.pickupDate}
-                onChange={handleChange}
-                required
-                className="pl-10 block w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Pickup Time
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Clock className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="time"
-                name="pickupTime"
-                value={formData.pickupTime}
-                onChange={handleChange}
-                required
-                className="pl-10 block w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Dropoff Date & Time */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Drop-off Date
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Calendar className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="date"
-                name="dropoffDate"
-                value={formData.dropoffDate}
-                onChange={handleChange}
-                required
-                className="pl-10 block w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Drop-off Time
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Clock className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="time"
-                name="dropoffTime"
-                value={formData.dropoffTime}
-                onChange={handleChange}
-                required
-                className="pl-10 block w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
-        </div>
-        
-        {/* Submit Button */}
-        <button
-          type="submit"
-          className="mt-6 w-full bg-transparent text-black bg-clip-text border-3 border-yellow  py-2 px-4 rounded-md 
-          hover:shadow-[0_0_15px_rgba(255,165,0,0.8)] 
-          focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 
-          transition-all 
-          text-lg font-semibold
-          border-gradient-to-r from-yellow-400 to-orange-500 
-          hover:text-yellow-400 hover:border-yellow-400"
-        >
-          BOOK CAR
-        </button>
-      </form>
-    </div>
-  );
-};
-
-
-
-
-
-
 function Image({ src }) {
   return (
     <div className="w-1/3 flex justify-center">
-      <img src={src} alt="Rental Car" className="w-full max-w-xs md:max-w-sm lg:max-w-md" />
+      <img
+        src={src}
+        alt="Rental Car"
+        className="w-full max-w-xs md:max-w-sm lg:max-w-md"
+      />
     </div>
   );
 }
 
-function AutoSlideshow() {
-  const images = [slide1, slide2, slide3];
-  const [currentIndex, setCurrentIndex] = useState(0);
+function Slideshow() {
+  const [images, setImages] = useState([]);
+  const [current, setCurrent] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
-    }, 3000); 
-    return () => clearInterval(interval);
+    const fetchData = async () => {
+      try {
+        const response = await axios.get("/user/slideshow_images");
+        console.log("image", response);
+        setImages(response.data);
+      } catch (error) {
+        console.log(Error);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  return (
-    <div className="relative w-full max-w-4x2 mx-auto overflow-hidden mt-20">
-      <div className="relative w-full h-200">
-        {images.map((image, index) => (
-          <img key={index} src={image} alt={`Slide ${index + 1}`} className={`absolute inset-0 w-full h-full object-cover rounded-lg transition-opacity duration-700 ${index === currentIndex ? "opacity-100" : "opacity-0"}`} />
-        ))}
-      </div>
-    </div>                                      
-  );
-}
+  const slideshowPath = [];
+  images.map((image) => slideshowPath.push(image.keyImage));
+  console.log(slideshowPath);
+  useEffect(() => {
+    if (slideshowPath.length === 0) return;
+    const interval = setInterval(() => {
+      setCurrent((prev) => (prev + 1) % slideshowPath.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [slideshowPath]);
 
-function Review() {
-  const images = [review1, review2, review3, review4, review5, review6];
+  if (slideshowPath.length === 0) return <div>Loading slideshow...</div>;
 
   return (
-    <div className="relative h-100 flex items-center overflow-hidden mt-12">
-      {images.map((image, index) => (
-        <motion.div
-          key={index}
-          className="absolute"
-          initial={{ x: "-100%" }}
-          animate={{ x: "100vw" }}
-          transition={{ duration: 15, ease: "linear", repeat: Infinity, delay: index * 6 }}
-        >
-          <img src={image} alt={`Review ${index + 1}`} className="w-auto h-auto max-w-full max-h-96" />
-        </motion.div>
-      ))}
+    <div className="w-full h-full flex justify-center items-center bg-gray-200 rounded-xl overflow-hidden shadow-md gap-12 mt-12">
+      <img
+        src={slideshowPath[current]}
+        alt="slideshow"
+        className="w-full h-full object-cover transition-all duration-500"
+      />
     </div>
   );
 }
 
+
+
 export default Rent;
- 

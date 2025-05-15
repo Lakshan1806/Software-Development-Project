@@ -6,7 +6,7 @@ import React, {
   useContext,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import API from "../api";
+import axios from "axios";
 
 const AuthContext = createContext();
 
@@ -18,25 +18,29 @@ const AuthProvider = ({ children }) => {
 
   const navigate = useNavigate();
 
-  // Check if user is authenticated on mount
-
   const checkAuth = useCallback(async () => {
     try {
-      const response = await API.get("/auth/is-auth");
+      const response = await axios.get("/auth/is-auth");
 
       if (response.data.success) {
         setUser(response.data.user);
         setIsAuthenticated(true);
+        return true;
       } else {
         setUser(null);
         setIsAuthenticated(false);
+        return false;
       }
     } catch (error) {
       console.error("Auth check failed:", error);
       setUser(null);
       setIsAuthenticated(false);
+      if (error.message === 'Account terminated') {
+        navigate('/login?error=account_terminated');
+      }
+      return false;
     }
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     const handleGoogleRedirect = async () => {
@@ -57,7 +61,7 @@ const AuthProvider = ({ children }) => {
     setMessage("");
     console.log("Sending registration data:", formData);
     try {
-      const response = await API.post("/auth/register", formData);
+      const response = await axios.post("/auth/register", formData);
 
       if (response.status === 201) {
         setUser(response.data.user);
@@ -79,7 +83,7 @@ const AuthProvider = ({ children }) => {
   // OTP login function
   const login = async ({ otp }) => {
     try {
-      const response = await API.post("/auth/login", { otp });
+      const response = await axios.post("/auth/login", { otp });
 
       if (response.data.success) {
         setUser(response.data.user);
@@ -98,7 +102,7 @@ const AuthProvider = ({ children }) => {
   // Logout function
   const logout = async () => {
     try {
-      await API.post("/auth/logout");
+      await axios.post("/auth/logout");
       setUser(null);
       setIsAuthenticated(false);
       navigate("/");
@@ -111,7 +115,7 @@ const AuthProvider = ({ children }) => {
   // Forgot password handler
   const forgotPassword = async (email) => {
     try {
-      const response = await API.post("/auth/forgot-password", { email });
+      const response = await axios.post("/auth/forgot-password", { email });
       return response.data;
     } catch (error) {
       throw new Error("Failed to send password reset link");
@@ -121,7 +125,7 @@ const AuthProvider = ({ children }) => {
   // Resend OTP handler
   const resendOtp = async (email) => {
     try {
-      const response = await API.post("/resend-otp", { email });
+      const response = await axios.post("/resend-otp", { email });
       return response.data;
     } catch (error) {
       console.error("Resend OTP error:", error);
@@ -132,7 +136,7 @@ const AuthProvider = ({ children }) => {
   const resetPassword = async (token, password) => {
     setError(null);
     try {
-      const response = await API.post(`/auth/reset-password/${token}`, {
+      const response = await axios.post(`/auth/reset-password/${token}`, {
         password,
       });
       setMessage({ message: response.data.message });
@@ -140,17 +144,22 @@ const AuthProvider = ({ children }) => {
       setError("Failed to reset password");
     }
   };
-  const loginWithGoogle = () => {
+  const loginWithGoogle = useCallback((intent = "login") => {
     try {
-      window.open("http://localhost:5000/auth/google?redirect=true", "_self");
+      setError(null);
+      window.open(
+        `http://localhost:5000/auth/google?intent=${intent}`,
+        "_self"
+      );
     } catch (error) {
       setError("Failed to initiate Google login");
       console.error("Google login error:", error);
     }
-  };
+  }, []);
+
   const getProfile = useCallback(async () => {
     try {
-      const response = await API.get("/auth/profile");
+      const response = await axios.get("/auth/profile");
       if (response.data) {
         setUser(response.data);
         setIsAuthenticated(true);
@@ -162,6 +171,7 @@ const AuthProvider = ({ children }) => {
       throw error;
     }
   }, []);
+  
 
   const value = {
     user,
@@ -187,4 +197,6 @@ const useAuth = () => {
   return context;
 };
 
+
 export { AuthContext, AuthProvider, useAuth };
+

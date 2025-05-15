@@ -13,7 +13,7 @@ function FeedbackForm() {
     try {
       console.log("Submitting feedback:", data);
 
-      const response = await axios.post("http://localhost:5000/feedback/submit", data);
+      const response = await axios.post("user/submit", data);
       console.log("Response:", response.data);
 
       if (response.data.success) {
