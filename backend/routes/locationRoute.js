@@ -167,7 +167,7 @@ router.post("/rides/schedule", async (req, res) => {
 
 // In your routes file (location.js or similar)
 router.get("/rides/scheduled", (req, res) => {
-  console.log("Scheduled rides endpoint hit!"); // Debug log
+  console.log("Scheduled rides endpoint hit!"); 
   try {
     const now = new Date();
     const rides = Array.from(scheduledRides.values())
@@ -177,7 +177,7 @@ router.get("/rides/scheduled", (req, res) => {
         scheduledTime: ride.scheduledTime.toISOString()
       }));
     
-    console.log("Returning rides:", rides); // Debug log
+    console.log("Returning rides:", rides); 
     
     res.json({
       status: "SUCCESS",
@@ -185,7 +185,7 @@ router.get("/rides/scheduled", (req, res) => {
       count: rides.length
     });
   } catch (error) {
-    console.error("Error:", error); // Debug log
+    console.error("Error:", error); 
     res.status(500).json({ 
       message: error.message,
       status: "ERROR"
