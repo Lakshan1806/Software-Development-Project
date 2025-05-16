@@ -40,17 +40,103 @@ const ChatAndCall = () => {
   useEffect(() => {
     if (!roomId) return;
 
-    socket.emit("join-room", { roomId });
+    try {
+      socket.emit("join-room", { roomId });
 
-    axios.get(`http://localhost:5000/api/messages/${roomId}`).then((res) => {
-      setMessages(res.data);
-    });
+      axios.get(`http://localhost:5000/api/messages/${roomId}`)
+        .then((res) => setMessages(res.data))
+        .catch((err) => console.error("Failed to fetch messages", err));
 
-    socket.on("receive-message", (data) => {
-      setMessages((prev) => [...prev, data]);
-    });
+      socket.on("receive-message", (data) => {
+        setMessages((prev) => [...prev, data]);
+      });
 
-    socket.on("call-made", async ({ offer, socket: from }) => {
+      socket.on("call-made", async ({ offer, socket: from }) => {
+        try {
+          await setupMedia();
+          peerConnection.current = new RTCPeerConnection(servers);
+          addLocalTracks();
+
+          peerConnection.current.ontrack = ({ streams: [stream] }) => {
+            remoteAudioRef.current.srcObject = stream;
+          };
+
+          peerConnection.current.onicecandidate = (event) => {
+            if (event.candidate) {
+              socket.emit("ice-candidate", {
+                to: from,
+                candidate: event.candidate,
+              });
+            }
+          };
+
+          await peerConnection.current.setRemoteDescription(new RTCSessionDescription(offer));
+          const answer = await peerConnection.current.createAnswer();
+          await peerConnection.current.setLocalDescription(answer);
+
+          socket.emit("make-answer", {
+            answer,
+            to: from,
+          });
+
+          setInCall(true);
+          await logCall("started");
+        } catch (err) {
+          console.error("Error handling incoming call", err);
+        }
+      });
+
+      socket.on("answer-made", async ({ answer }) => {
+        try {
+          await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
+          setInCall(true);
+        } catch (err) {
+          console.error("Error setting remote description", err);
+        }
+      });
+
+      socket.on("ice-candidate", ({ candidate }) => {
+        try {
+          if (peerConnection.current) {
+            peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
+          }
+        } catch (err) {
+          console.error("Error adding ICE candidate", err);
+        }
+      });
+    } catch (err) {
+      console.error("Error in useEffect", err);
+    }
+
+    return () => {
+      socket.off("receive-message");
+      socket.off("call-made");
+      socket.off("answer-made");
+      socket.off("ice-candidate");
+    };
+  }, [roomId]);
+
+  const setupMedia = async () => {
+    try {
+      localStream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localAudioRef.current.srcObject = localStream.current;
+    } catch (err) {
+      console.error("Failed to access microphone", err);
+    }
+  };
+
+  const addLocalTracks = () => {
+    try {
+      localStream.current.getTracks().forEach((track) => {
+        peerConnection.current.addTrack(track, localStream.current);
+      });
+    } catch (err) {
+      console.error("Error adding local tracks", err);
+    }
+  };
+
+  const initiateCall = async () => {
+    try {
       await setupMedia();
       peerConnection.current = new RTCPeerConnection(servers);
       addLocalTracks();
@@ -62,103 +148,53 @@ const ChatAndCall = () => {
       peerConnection.current.onicecandidate = (event) => {
         if (event.candidate) {
           socket.emit("ice-candidate", {
-            to: from,
+            to: driverId,
             candidate: event.candidate,
           });
         }
       };
 
-      await peerConnection.current.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await peerConnection.current.createAnswer();
-      await peerConnection.current.setLocalDescription(answer);
+      const offer = await peerConnection.current.createOffer();
+      await peerConnection.current.setLocalDescription(offer);
 
-      socket.emit("make-answer", {
-        answer,
-        to: from,
+      socket.emit("call-user", {
+        offer,
+        to: driverId,
       });
 
       setInCall(true);
       await logCall("started");
-    });
-
-    socket.on("answer-made", async ({ answer }) => {
-      await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
-      setInCall(true);
-    });
-
-    socket.on("ice-candidate", ({ candidate }) => {
-      if (peerConnection.current) {
-        peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
-      }
-    });
-
-    return () => {
-      socket.off("receive-message");
-      socket.off("call-made");
-      socket.off("answer-made");
-      socket.off("ice-candidate");
-    };
-  }, [roomId]);
-
-  const setupMedia = async () => {
-    localStream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
-    localAudioRef.current.srcObject = localStream.current;
-  };
-
-  const addLocalTracks = () => {
-    localStream.current.getTracks().forEach((track) => {
-      peerConnection.current.addTrack(track, localStream.current);
-    });
-  };
-
-  const initiateCall = async () => {
-    await setupMedia();
-    peerConnection.current = new RTCPeerConnection(servers);
-    addLocalTracks();
-
-    peerConnection.current.ontrack = ({ streams: [stream] }) => {
-      remoteAudioRef.current.srcObject = stream;
-    };
-
-    peerConnection.current.onicecandidate = (event) => {
-      if (event.candidate) {
-        socket.emit("ice-candidate", {
-          to: driverId,
-          candidate: event.candidate,
-        });
-      }
-    };
-
-    const offer = await peerConnection.current.createOffer();
-    await peerConnection.current.setLocalDescription(offer);
-
-    socket.emit("call-user", {
-      offer,
-      to: driverId,
-    });
-
-    setInCall(true);
-    await logCall("started");
+    } catch (err) {
+      console.error("Failed to initiate call", err);
+    }
   };
 
   const endCall = async () => {
-    if (peerConnection.current) {
-      peerConnection.current.close();
-      peerConnection.current = null;
-    }
+    try {
+      if (peerConnection.current) {
+        peerConnection.current.close();
+        peerConnection.current = null;
+      }
 
-    if (localStream.current) {
-      localStream.current.getTracks().forEach((track) => track.stop());
-    }
+      if (localStream.current) {
+        localStream.current.getTracks().forEach((track) => track.stop());
+      }
 
-    setInCall(false);
-    await logCall("completed");
+      setInCall(false);
+      await logCall("completed");
+    } catch (err) {
+      console.error("Failed to end call", err);
+    }
   };
 
   const toggleMute = () => {
-    if (localStream.current) {
-      localStream.current.getAudioTracks()[0].enabled = isMuted;
-      setIsMuted(!isMuted);
+    try {
+      if (localStream.current) {
+        localStream.current.getAudioTracks()[0].enabled = isMuted;
+        setIsMuted(!isMuted);
+      }
+    } catch (err) {
+      console.error("Failed to toggle mute", err);
     }
   };
 
@@ -173,9 +209,13 @@ const ChatAndCall = () => {
     if (!message.trim()) return;
 
     const newMsg = { senderId: sender, receiverId: receiver, message, roomId };
-    socket.emit("send-message", newMsg);
-    await axios.post("http://localhost:5000/api/messages", newMsg);
-    clearInput("");
+    try {
+      socket.emit("send-message", newMsg);
+      await axios.post("http://localhost:5000/api/messages", newMsg);
+      clearInput("");
+    } catch (err) {
+      console.error("Failed to send message", err);
+    }
   };
 
   return (
